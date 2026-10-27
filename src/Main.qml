@@ -195,6 +195,23 @@ ApplicationWindow {
         else if (markdown) restoreSource(sourceEditor.cursorPosition)
         else slideEditor.forceActiveFocus()
     }
+    readonly property bool canResizeEditor: !popupOpen && !deck.compressingImage && editorPane.visible && workspace.visible
+    // The height the editor returns to when it leaves its tall notes mode.
+    property real editorRestoreHeight: 250
+    function resizeEditor(height) {
+        height = Math.round(Math.max(workspace.editorMinimum, Math.min(workspace.editorMaximum, height)))
+        editorPane.SplitView.preferredHeight = height
+        deck.setEditorHeight(height)
+    }
+    // Tall for long notes, then back to where it was.
+    function toggleTallEditor() {
+        if (editorPane.height >= workspace.editorMaximum - 1) {
+            resizeEditor(editorRestoreHeight)
+        } else {
+            editorRestoreHeight = editorPane.height
+            resizeEditor(workspace.editorMaximum)
+        }
+    }
     function editorKey(editor, flick, event) {
         if ((event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) && !(event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))) {
             event.accepted = true
@@ -722,6 +739,9 @@ ApplicationWindow {
     Shortcut { sequence: "Ctrl+Z"; enabled: !win.popupOpen && !deck.compressingImage && (!slideEditor.activeFocus && !sourceEditor.activeFocus); onActivated: deck.undo() }
     Shortcut { sequence: "Ctrl+Shift+Z"; enabled: !win.popupOpen && !deck.compressingImage && (!slideEditor.activeFocus && !sourceEditor.activeFocus); onActivated: deck.redo() }
     Shortcut { sequence: "Ctrl+D"; enabled: !win.popupOpen && !deck.compressingImage && (!slideEditor.activeFocus && !sourceEditor.activeFocus); onActivated: deck.duplicateSlide() }
+    Shortcut { sequence: "Ctrl+Alt+Up"; enabled: win.canResizeEditor; onActivated: win.resizeEditor(editorPane.height + 80) }
+    Shortcut { sequence: "Ctrl+Alt+Down"; enabled: win.canResizeEditor; onActivated: win.resizeEditor(editorPane.height - 80) }
+    Shortcut { sequence: "Ctrl+Alt+E"; enabled: win.canResizeEditor; onActivated: win.toggleTallEditor() }
     Shortcut { sequence: "Ctrl+Shift+H"; enabled: !win.popupOpen && !deck.compressingImage && !win.presenting; onActivated: deck.toggleHidden() }
     Shortcut { enabled: !win.popupOpen && !deck.compressingImage; sequence: "Ctrl+Return"; onActivated: { win.addSlide() } }
     Shortcut { sequence: "Delete"; enabled: !win.popupOpen && !deck.compressingImage && (!slideEditor.activeFocus && !sourceEditor.activeFocus); onActivated: deck.deleteSlide() }
@@ -1159,6 +1179,7 @@ ApplicationWindow {
             { title: "View", keys: [
                 ["Ctrl+M", "Overview on or off"], ["Ctrl+.", "Markdown source on or off"],
                 ["Tab", "Switch between slides and editor"], ["Enter", "Open slide from Overview"],
+                ["Ctrl+Alt+Up / Down", "Make the editor taller or shorter"], ["Ctrl+Alt+E", "Tall editor on or off"],
                 ["? / F1", "Show these shortcuts"] ] },
             { title: "Slides", keys: [
                 ["Arrows", "Previous or next slide, by row in Overview"], ["Page Up / Page Down", "Jump five slides, or five rows in Overview"],
@@ -1502,177 +1523,187 @@ ApplicationWindow {
                 }
             }
         }
-        SplitView {
-            id: workspace; orientation: Qt.Vertical
+        // The color sits behind the split rather than as its background: with a background,
+        // SplitView finds that instead of the handle under the pointer, and the handle won't drag.
+        Rectangle {
+            color: win.ui.background
             visible: (!win.markdown && !win.overview) || win.presenting
             Layout.fillWidth: true; Layout.fillHeight: true
             Layout.margins: win.presenting ? 0 : win.inset; Layout.leftMargin: 0
-            background: Rectangle { color: win.ui.background }
-            handle: Rectangle {
-                implicitHeight: win.presenting ? 0 : 6
-                color: SplitHandle.hovered || SplitHandle.pressed ? win.ui.accent : win.ui.border
-            }
-            Item {
-                id: stage; objectName: "stage"; SplitView.fillHeight: true; SplitView.minimumHeight: 160; focus: true
-                property real margin: win.presenting ? 0 : 32
-                property real slideWidth: Math.min(width-margin*2,(height-margin*2)*16/9)
-                Item {
-                    id: slideFrame; objectName: "slideFrame"; width: stage.slideWidth; height: width*9/16; anchors.centerIn: parent
-                    // Keep the fast thumbnail behind the full render. Even if it remains visible
-                    // briefly after loading, it cannot cover the sharp image once that is ready.
-                    Image {
-                        objectName: "slideQuickPreview"; anchors.fill: parent
-                        visible: slidePreview.status === Image.Loading && slidePreview.shownSlide !== deck.selected && status === Image.Ready
-                        // The same URL and size as the sidebar thumbnail, so it comes from Qt's pixmap cache.
-                        // A talk never flashes the finished slide before its first step.
-                        source: "image://slides/" + (deck.revision, deck.renderId(deck.selected, win.presenting ? win.buildStep : -1))
-                        asynchronous: true; cache: true; sourceSize: Qt.size(340, 192)
-                    }
-                    Image {
-                        id: slidePreview; objectName: "slidePreview"; anchors.fill: parent
-                        source: "image://slides/" + (deck.revision, deck.renderId(deck.selected, win.presenting ? win.buildStep : -1)) + (animation.active ? "/background" : "")
-                        asynchronous: true; retainWhileLoading: true; cache: true; sourceSize: Qt.size(1920, 1080)
-                        property int shownSlide: -1
-                        // On a new slide, let its thumbnail show while this render loads. Edits to
-                        // the same slide retain the previous sharp frame until the new one is ready.
-                        visible: status === Image.Ready || shownSlide === deck.selected
-                        onStatusChanged: if (status === Image.Ready) shownSlide = deck.selected
-                    }
-                    Loader {
-                        id: animation; objectName: "animationLoader"
-                        active: workspace.visible && !!deck.media.animated
-                        x: deck.media.rect.x * slideFrame.width / 1920
-                        y: deck.media.rect.y * slideFrame.height / 1080
-                        width: deck.media.rect.width * slideFrame.width / 1920
-                        height: deck.media.rect.height * slideFrame.height / 1080
-                        sourceComponent: AnimatedImage {
-                            objectName: "animatedMedia"
-                            source: deck.media.url
-                            asynchronous: true
-                            cache: false // Decode the current frame without retaining an entire animation.
-                            playing: true
-                            property bool autoplay: deck.media.autoplay
-                            paused: !autoplay
-                            onAutoplayChanged: paused = !autoplay
-                            fillMode: deck.media.span ? Image.PreserveAspectCrop : Image.PreserveAspectFit
-                            // Placed images hug their corner or edge, matching the rendered slide.
-                            readonly property int alignment: deck.media.alignment || Qt.AlignCenter
-                            horizontalAlignment: alignment & Qt.AlignHorizontal_Mask
-                            verticalAlignment: alignment & Qt.AlignVertical_Mask
-                            clip: true
-                            layer.enabled: !!deck.media.title && !deck.media.position
-                            layer.effect: MultiEffect {
-                                blurEnabled: true
-                                blurMax: 4
-                                blur: Math.min(1, 0.5 * slideFrame.width / 1920)
-                                autoPaddingEnabled: false
-                            }
-                            onSourceChanged: paused = !autoplay
-                            onStatusChanged: if (status === Image.Ready) paused = !autoplay
-                        }
-                    }
-                    VideoOutput {
-                        id: video; objectName: "videoOutput"
-                        visible: deck.media.video && (player.playbackState !== MediaPlayer.StoppedState || player.mediaStatus === MediaPlayer.EndOfMedia)
-                        endOfStreamPolicy: VideoOutput.KeepLastFrame
-                        x: deck.media.rect.x * slideFrame.width / 1920
-                        y: deck.media.rect.y * slideFrame.height / 1080
-                        width: deck.media.rect.width * slideFrame.width / 1920
-                        height: deck.media.rect.height * slideFrame.height / 1080
-                        fillMode: deck.media.span ? VideoOutput.PreserveAspectCrop : VideoOutput.PreserveAspectFit
-                    }
-                    Image { anchors.fill: parent; source: visible ? "image://slides/" + (deck.revision, deck.renderId(deck.selected)) + "/overlay" : ""; asynchronous: true; retainWhileLoading: true; sourceSize: Qt.size(1920,1080); visible: animation.active || (video.visible && deck.media.span) }
-                    Button { visible: deck.media.video && !win.presenting; anchors.centerIn: parent; text: player.playbackState === MediaPlayer.PlayingState ? "Pause" : "▶ Play"; onClicked: win.toggleVideo() }
-                    MouseArea {
-                        anchors.fill: parent
-                        enabled: win.presenting
-                        onClicked: win.advance(1)
-                    }
-                    // Double-click a label in the slide's SVG to retype it in place.
-                    TapHandler {
-                        enabled: !win.presenting && !labelEditor.visible
-                        onDoubleTapped: function(point) {
-                            const label = deck.svgLabelAt(point.position.x * 1920 / slideFrame.width,
-                                                          point.position.y * 1080 / slideFrame.height)
-                            if (label.file) labelEditor.edit(label)
-                        }
-                    }
-                    TextField {
-                        id: labelEditor; objectName: "labelEditor"
-                        property var label: ({})
-                        readonly property real scale: slideFrame.width / 1920
-                        visible: false; z: 5
-                        font.family: label.family || win.font.family
-                        font.pixelSize: Math.max(8, Math.round((label.fontSize || 16) * scale))
-                        font.weight: label.weight || Font.Normal
-                        color: win.ui.foreground
-                        leftPadding: 6; rightPadding: 6; topPadding: 2; bottomPadding: 2
-                        horizontalAlignment: label.anchor === "middle" ? Text.AlignHCenter
-                            : label.anchor === "end" ? Text.AlignRight : Text.AlignLeft
-                        // Grows with the text from the label's anchor, as the SVG will.
-                        width: Math.max((label.width || 0) * scale, labelMetrics.advanceWidth) + leftPadding + rightPadding + 12
-                        height: (label.height || 0) * scale + topPadding + bottomPadding
-                        x: (label.anchor === "middle" ? ((label.x || 0) + (label.width || 0) / 2) * scale - width / 2
-                            : label.anchor === "end" ? ((label.x || 0) + (label.width || 0)) * scale - width + rightPadding
-                            : (label.x || 0) * scale - leftPadding)
-                        y: (label.y || 0) * scale - topPadding
-                        background: Rectangle { color: win.ui.background; radius: win.softRadius; border.color: win.ui.accent; border.width: 2 }
-                        TextMetrics { id: labelMetrics; font: labelEditor.font; text: labelEditor.text }
-                        function edit(found) {
-                            label = found
-                            text = found.text
-                            visible = true
-                            forceActiveFocus()
-                            selectAll()
-                        }
-                        function commit() {
-                            if (!visible) return
-                            visible = false
-                            deck.editSvgLabel(label.file, label.start, label.end, label.raw, text)
-                            stage.forceActiveFocus()
-                        }
-                        onAccepted: commit()
-                        onActiveFocusChanged: if (!activeFocus) commit()
-                        Keys.onEscapePressed: { visible = false; stage.forceActiveFocus() }
-                    }
+            SplitView {
+                id: workspace; objectName: "workspace"; orientation: Qt.Vertical
+                anchors.fill: parent
+                handle: Rectangle {
+                    implicitHeight: win.presenting ? 0 : 6
+                    color: SplitHandle.hovered || SplitHandle.pressed ? win.ui.accent : win.ui.border
                 }
-                DropArea { anchors.fill: parent; onDropped: function(drop) { if (drop.hasUrls) for (let i = 0; i < drop.urls.length; ++i) { if (!deck.importMedia(drop.urls[i], i > 0)) break } } }
-            }
-            ColumnLayout {
-                id: editorPane; objectName: "editorPane"
-                visible: !win.presenting; spacing: 0
-                SplitView.preferredHeight: 250; SplitView.minimumHeight: 140
-                SplitView.maximumHeight: workspace.height * 0.65
-                EditorToolbar { id: slideBar; Layout.fillWidth: true }
-                Rectangle {
-                    objectName: "slideEditorFrame"
-                    Layout.fillWidth: true; Layout.fillHeight: true
-                    color: win.ui.background; radius: win.softRadius
-                    readonly property color focusStroke: win.focusedEditor === "slide" && !win.popupOpen ? win.ui.inactiveSelection : win.ui.border
-                    border.color: focusStroke; border.width: 1
-                    ScrollView {
-                        id: slideScroll; objectName: "slideScroll"
-                        anchors.fill: parent; anchors.margins: 1; clip: true
-                        WheelHandler {
-                            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-                            target: null
-                            onWheel: function(event) { win.scrollEditor(slideScroll.contentItem, event) }
+                // The editor can take everything but the stage's minimum; a drag is remembered.
+                readonly property real editorMaximum: Math.max(editorMinimum, height - 166)
+                readonly property real editorMinimum: 140
+                onResizingChanged: if (!resizing) deck.setEditorHeight(editorPane.height)
+                Item {
+                    id: stage; objectName: "stage"; SplitView.fillHeight: true; SplitView.minimumHeight: 160; focus: true
+                    property real margin: win.presenting ? 0 : 32
+                    property real slideWidth: Math.min(width-margin*2,(height-margin*2)*16/9)
+                    Item {
+                        id: slideFrame; objectName: "slideFrame"; width: stage.slideWidth; height: width*9/16; anchors.centerIn: parent
+                        // Keep the fast thumbnail behind the full render. Even if it remains visible
+                        // briefly after loading, it cannot cover the sharp image once that is ready.
+                        Image {
+                            objectName: "slideQuickPreview"; anchors.fill: parent
+                            visible: slidePreview.status === Image.Loading && slidePreview.shownSlide !== deck.selected && status === Image.Ready
+                            // The same URL and size as the sidebar thumbnail, so it comes from Qt's pixmap cache.
+                            // A talk never flashes the finished slide before its first step.
+                            source: "image://slides/" + (deck.revision, deck.renderId(deck.selected, win.presenting ? win.buildStep : -1))
+                            asynchronous: true; cache: true; sourceSize: Qt.size(340, 192)
                         }
-                        TextArea {
-                            id: slideEditor; objectName: "slideEditor"; persistentSelection: true; textFormat: TextEdit.PlainText; color: win.ui.foreground; selectionColor: win.ui.selection; selectedTextColor: win.ui.selectionText; font.family: "JetBrains Mono"; font.pixelSize: 16
-                            onActiveFocusChanged: if (activeFocus) win.focusedEditor = "slide"
-                            wrapMode: TextEdit.Wrap; leftPadding: 24; topPadding: 16; placeholderText: "# Your headline"
-                            onTextChanged: {
-                                if (!win.syncingEditor && activeFocus) {
-                                    const previousCount = deck.count
-                                    win.editingSlide = true
-                                    deck.editSlide(text)
-                                    win.editingSlide = false
-                                    if (deck.count !== previousCount) win.syncEditors()
+                        Image {
+                            id: slidePreview; objectName: "slidePreview"; anchors.fill: parent
+                            source: "image://slides/" + (deck.revision, deck.renderId(deck.selected, win.presenting ? win.buildStep : -1)) + (animation.active ? "/background" : "")
+                            asynchronous: true; retainWhileLoading: true; cache: true; sourceSize: Qt.size(1920, 1080)
+                            property int shownSlide: -1
+                            // On a new slide, let its thumbnail show while this render loads. Edits to
+                            // the same slide retain the previous sharp frame until the new one is ready.
+                            visible: status === Image.Ready || shownSlide === deck.selected
+                            onStatusChanged: if (status === Image.Ready) shownSlide = deck.selected
+                        }
+                        Loader {
+                            id: animation; objectName: "animationLoader"
+                            active: workspace.visible && !!deck.media.animated
+                            x: deck.media.rect.x * slideFrame.width / 1920
+                            y: deck.media.rect.y * slideFrame.height / 1080
+                            width: deck.media.rect.width * slideFrame.width / 1920
+                            height: deck.media.rect.height * slideFrame.height / 1080
+                            sourceComponent: AnimatedImage {
+                                objectName: "animatedMedia"
+                                source: deck.media.url
+                                asynchronous: true
+                                cache: false // Decode the current frame without retaining an entire animation.
+                                playing: true
+                                property bool autoplay: deck.media.autoplay
+                                paused: !autoplay
+                                onAutoplayChanged: paused = !autoplay
+                                fillMode: deck.media.span ? Image.PreserveAspectCrop : Image.PreserveAspectFit
+                                // Placed images hug their corner or edge, matching the rendered slide.
+                                readonly property int alignment: deck.media.alignment || Qt.AlignCenter
+                                horizontalAlignment: alignment & Qt.AlignHorizontal_Mask
+                                verticalAlignment: alignment & Qt.AlignVertical_Mask
+                                clip: true
+                                layer.enabled: !!deck.media.title && !deck.media.position
+                                layer.effect: MultiEffect {
+                                    blurEnabled: true
+                                    blurMax: 4
+                                    blur: Math.min(1, 0.5 * slideFrame.width / 1920)
+                                    autoPaddingEnabled: false
                                 }
+                                onSourceChanged: paused = !autoplay
+                                onStatusChanged: if (status === Image.Ready) paused = !autoplay
                             }
-                            onCursorPositionChanged: { if (!win.syncingEditor && activeFocus) win.sourceOnlyCursor = -1 }
-                            Keys.onPressed: function(event) { win.editorKey(slideEditor, slideScroll.contentItem, event) }
+                        }
+                        VideoOutput {
+                            id: video; objectName: "videoOutput"
+                            visible: deck.media.video && (player.playbackState !== MediaPlayer.StoppedState || player.mediaStatus === MediaPlayer.EndOfMedia)
+                            endOfStreamPolicy: VideoOutput.KeepLastFrame
+                            x: deck.media.rect.x * slideFrame.width / 1920
+                            y: deck.media.rect.y * slideFrame.height / 1080
+                            width: deck.media.rect.width * slideFrame.width / 1920
+                            height: deck.media.rect.height * slideFrame.height / 1080
+                            fillMode: deck.media.span ? VideoOutput.PreserveAspectCrop : VideoOutput.PreserveAspectFit
+                        }
+                        Image { anchors.fill: parent; source: visible ? "image://slides/" + (deck.revision, deck.renderId(deck.selected)) + "/overlay" : ""; asynchronous: true; retainWhileLoading: true; sourceSize: Qt.size(1920,1080); visible: animation.active || (video.visible && deck.media.span) }
+                        Button { visible: deck.media.video && !win.presenting; anchors.centerIn: parent; text: player.playbackState === MediaPlayer.PlayingState ? "Pause" : "▶ Play"; onClicked: win.toggleVideo() }
+                        MouseArea {
+                            anchors.fill: parent
+                            enabled: win.presenting
+                            onClicked: win.advance(1)
+                        }
+                        // Double-click a label in the slide's SVG to retype it in place.
+                        TapHandler {
+                            enabled: !win.presenting && !labelEditor.visible
+                            onDoubleTapped: function(point) {
+                                const label = deck.svgLabelAt(point.position.x * 1920 / slideFrame.width,
+                                                              point.position.y * 1080 / slideFrame.height)
+                                if (label.file) labelEditor.edit(label)
+                            }
+                        }
+                        TextField {
+                            id: labelEditor; objectName: "labelEditor"
+                            property var label: ({})
+                            readonly property real scale: slideFrame.width / 1920
+                            visible: false; z: 5
+                            font.family: label.family || win.font.family
+                            font.pixelSize: Math.max(8, Math.round((label.fontSize || 16) * scale))
+                            font.weight: label.weight || Font.Normal
+                            color: win.ui.foreground
+                            leftPadding: 6; rightPadding: 6; topPadding: 2; bottomPadding: 2
+                            horizontalAlignment: label.anchor === "middle" ? Text.AlignHCenter
+                                : label.anchor === "end" ? Text.AlignRight : Text.AlignLeft
+                            // Grows with the text from the label's anchor, as the SVG will.
+                            width: Math.max((label.width || 0) * scale, labelMetrics.advanceWidth) + leftPadding + rightPadding + 12
+                            height: (label.height || 0) * scale + topPadding + bottomPadding
+                            x: (label.anchor === "middle" ? ((label.x || 0) + (label.width || 0) / 2) * scale - width / 2
+                                : label.anchor === "end" ? ((label.x || 0) + (label.width || 0)) * scale - width + rightPadding
+                                : (label.x || 0) * scale - leftPadding)
+                            y: (label.y || 0) * scale - topPadding
+                            background: Rectangle { color: win.ui.background; radius: win.softRadius; border.color: win.ui.accent; border.width: 2 }
+                            TextMetrics { id: labelMetrics; font: labelEditor.font; text: labelEditor.text }
+                            function edit(found) {
+                                label = found
+                                text = found.text
+                                visible = true
+                                forceActiveFocus()
+                                selectAll()
+                            }
+                            function commit() {
+                                if (!visible) return
+                                visible = false
+                                deck.editSvgLabel(label.file, label.start, label.end, label.raw, text)
+                                stage.forceActiveFocus()
+                            }
+                            onAccepted: commit()
+                            onActiveFocusChanged: if (!activeFocus) commit()
+                            Keys.onEscapePressed: { visible = false; stage.forceActiveFocus() }
+                        }
+                    }
+                    DropArea { anchors.fill: parent; onDropped: function(drop) { if (drop.hasUrls) for (let i = 0; i < drop.urls.length; ++i) { if (!deck.importMedia(drop.urls[i], i > 0)) break } } }
+                }
+                ColumnLayout {
+                    id: editorPane; objectName: "editorPane"
+                    visible: !win.presenting; spacing: 0
+                    SplitView.preferredHeight: deck.editorHeight() || 250
+                    SplitView.minimumHeight: workspace.editorMinimum
+                    SplitView.maximumHeight: workspace.editorMaximum
+                    EditorToolbar { id: slideBar; Layout.fillWidth: true }
+                    Rectangle {
+                        objectName: "slideEditorFrame"
+                        Layout.fillWidth: true; Layout.fillHeight: true
+                        color: win.ui.background; radius: win.softRadius
+                        readonly property color focusStroke: win.focusedEditor === "slide" && !win.popupOpen ? win.ui.inactiveSelection : win.ui.border
+                        border.color: focusStroke; border.width: 1
+                        ScrollView {
+                            id: slideScroll; objectName: "slideScroll"
+                            anchors.fill: parent; anchors.margins: 1; clip: true
+                            WheelHandler {
+                                acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                                target: null
+                                onWheel: function(event) { win.scrollEditor(slideScroll.contentItem, event) }
+                            }
+                            TextArea {
+                                id: slideEditor; objectName: "slideEditor"; persistentSelection: true; textFormat: TextEdit.PlainText; color: win.ui.foreground; selectionColor: win.ui.selection; selectedTextColor: win.ui.selectionText; font.family: "JetBrains Mono"; font.pixelSize: 16
+                                onActiveFocusChanged: if (activeFocus) win.focusedEditor = "slide"
+                                wrapMode: TextEdit.Wrap; leftPadding: 24; topPadding: 16; placeholderText: "# Your headline"
+                                onTextChanged: {
+                                    if (!win.syncingEditor && activeFocus) {
+                                        const previousCount = deck.count
+                                        win.editingSlide = true
+                                        deck.editSlide(text)
+                                        win.editingSlide = false
+                                        if (deck.count !== previousCount) win.syncEditors()
+                                    }
+                                }
+                                onCursorPositionChanged: { if (!win.syncingEditor && activeFocus) win.sourceOnlyCursor = -1 }
+                                Keys.onPressed: function(event) { win.editorKey(slideEditor, slideScroll.contentItem, event) }
+                            }
                         }
                     }
                 }
