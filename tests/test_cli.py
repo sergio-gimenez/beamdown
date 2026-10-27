@@ -153,10 +153,13 @@ class CliTests(unittest.TestCase):
         self.assertEqual(self.png_size(self.root / 'slide-001-step-2.png'), (320, 180))
         self.assertIn('has no step 4; it has 3', self.hype('render', self.deck, '--slide', 1, '--step', 4, code=1).stderr)
         pages = lambda name: len(re.findall(rb'/Type\s*/Page\b', (self.root / name).read_bytes()))
-        self.hype('export', self.deck, 'finished.pdf')
-        self.hype('export', self.deck, 'steps.pdf', '--steps')
-        self.assertEqual((pages('finished.pdf'), pages('steps.pdf')), (2, 5))
-        self.assertIn('Only a PDF', self.hype('export', self.deck, 'talk.pptx', '--steps', code=1).stderr)
+        # A PDF pages through the steps, as beamer does; a handout shows each slide finished.
+        self.hype('export', self.deck, 'steps.pdf')
+        self.hype('export', self.deck, 'handout.pdf', '--handout')
+        self.assertEqual((pages('steps.pdf'), pages('handout.pdf')), (5, 2))
+        self.write(self.deck.read_text().replace('incremental: true', 'incremental: true\nclassoption: handout'))
+        self.hype('export', self.deck, 'option.pdf')
+        self.assertEqual(pages('option.pdf'), 2)
 
     @unittest.skipUnless(shutil.which('latex') and shutil.which('dvisvgm'), 'needs latex and dvisvgm')
     def test_math_is_typeset_and_bad_formulas_are_reported(self):

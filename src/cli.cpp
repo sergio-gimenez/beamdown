@@ -308,7 +308,7 @@ int exportDeck(const QStringList &arguments) {
     Command command("export", "Export a presentation as PDF or PowerPoint, chosen by the file extension.");
     command.parser.addPositionalArgument("output", "File ending in .pdf or .pptx", "<output>");
     command.includeHidden();
-    command.parser.addOption({"steps", "PDF only: a page for every build step, as beamer does"});
+    command.parser.addOption({"handout", "PDF: one page per slide, finished, instead of a page per build step"});
     command.json();
     command.parser.process(arguments);
     const QString output = command.argument(2);
@@ -319,9 +319,7 @@ int exportDeck(const QStringList &arguments) {
     if (!command.load(deck))
         return 1;
     deck.setIncludeHidden(command.parser.isSet("include-hidden"));
-    if (command.parser.isSet("steps") && format != "pdf")
-        return fail("Only a PDF can show build steps as pages.");
-    deck.setExpandSteps(command.parser.isSet("steps"));
+    deck.setHandout(command.parser.isSet("handout"));
     QDir().mkpath(QFileInfo(output).absolutePath());
     if (!(format == "pdf" ? deck.exportPdf(output) : deck.exportPptx(output)))
         return fail(deck.status());

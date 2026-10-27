@@ -90,8 +90,10 @@ Only the operator can fix it
 time; the first item shows with what comes before it. Fence a list in
 `::: incremental` or `::: nonincremental` to set it for that list alone. A
 picture after a pause appears on its own step. Steps are laid out as the
-finished slide, so text never moves as it appears. Exports show finished
-slides; `hype export talk.pdf --steps` gives each step a page, and
+finished slide, so text never moves as it appears. A PDF gives each step a
+page, as beamer does; `handout: true` (or pandoc's `classoption: handout`) in
+the front matter, or `hype export talk.pdf --handout`, gives one finished page
+per slide instead. PowerPoint shows finished slides, and
 `hype render --slide 3 --step 2` renders one step.
 
 ## Math
