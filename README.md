@@ -18,7 +18,7 @@ Then open **Hype** from the app launcher, or run `hype` in a terminal.
 
 Open Hype from your app launcher. It reopens your last presentation; use **Ctrl+N** to start a new one, or **Ctrl+O** to choose a Markdown file.
 
-In **Visual** mode, select a slide in the sidebar and write its Markdown below the preview. Changes appear as you type. Drag the divider to give the preview or editor more room. Two buttons in the top bar switch modes. The grid button, or **Ctrl+M**, turns the **Overview** on and off, returning to the mode you came from. The button beside it shows a slide in **Visual** mode and `#` in **Markdown** mode; click it, or press **Ctrl+.**, to switch between them. Markdown mode edits the whole presentation, with the same formatting bar on top.
+In **Visual** mode, select a slide in the sidebar and write its Markdown below the preview. Changes appear as you type. Drag the divider to give the preview or editor more room, or press **Ctrl+Alt+Up** / **Ctrl+Alt+Down**; **Ctrl+Alt+E** makes the editor tall for long speaker notes and back. Hype remembers the height. Two buttons in the top bar switch modes. The grid button, or **Ctrl+M**, turns the **Overview** on and off, returning to the mode you came from. The button beside it shows a slide in **Visual** mode and `#` in **Markdown** mode; click it, or press **Ctrl+.**, to switch between them. Markdown mode edits the whole presentation, with the same formatting bar on top.
 
 **Overview** mode fills the window with a grid of every slide. Select, rearrange, duplicate, and delete slides there as you would in the sidebar; the up and down arrows move by a row. Double-click a slide or press **Enter** to open it in Visual mode.
 
@@ -222,6 +222,8 @@ Slide navigation and selection shortcuts apply when the sidebar or preview has f
 | Ctrl+E / Ctrl+Shift+E | Export as PDF / PowerPoint |
 | Ctrl+M | Overview on / off |
 | Ctrl+. | Markdown source on / off |
+| Ctrl+Alt+Up / Down | Editor taller / shorter |
+| Ctrl+Alt+E | Tall editor on / off |
 | Ctrl+B / Ctrl+I / Ctrl+U | Bold / italic / underline |
 | Ctrl+H / Ctrl+K / Ctrl+/ | Headline / code block / hidden comment |
 | ? / F1 | Show all shortcuts (F1 also works while typing) |

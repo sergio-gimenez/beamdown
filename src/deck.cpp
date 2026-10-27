@@ -874,6 +874,12 @@ QString Deck::dialogDirectory() const {
     const QString documents = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
     return !documents.isEmpty() && QDir(documents).exists() ? documents : QDir::homePath();
 }
+double Deck::editorHeight() const {
+    return QSettings(QSettings::IniFormat, QSettings::UserScope, "hype", "hype").value("window/editorHeight").toDouble();
+}
+void Deck::setEditorHeight(double height) {
+    QSettings(QSettings::IniFormat, QSettings::UserScope, "hype", "hype").setValue("window/editorHeight", qRound(height));
+}
 static void rememberPresentation(const QString &path) {
     QSettings settings(QSettings::IniFormat, QSettings::UserScope, "hype", "hype");
     settings.setValue("files/lastDirectory", QFileInfo(path).absolutePath());

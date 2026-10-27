@@ -878,6 +878,48 @@ static void write(const QString &path, const QString &content) {
         window->setProperty("allowClose", true);
         window->close();
     }
+    void editorHandleResizesEditor() {
+        if (!qEnvironmentVariableIsSet("HYPE_GUI_TESTS"))
+            QSKIP("Set HYPE_GUI_TESTS=1");
+        Deck deck; deck.editSource("# One\n");
+        QQuickStyle::setStyle("Basic");
+        qmlRegisterType<SlideItem>("Hype", 1, 0, "SlideCanvas");
+        qmlRegisterType<AppTheme>("Hype", 1, 0, "AppTheme");
+        QQmlApplicationEngine engine;
+        engine.rootContext()->setContextProperty("deck", &deck);
+        engine.addImageProvider("slides", new Thumbnails(&deck));
+        engine.load(QUrl("qrc:/Main.qml"));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        auto window = qobject_cast<QQuickWindow *>(engine.rootObjects().first());
+        window->resize(1400, 1000);
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        auto pane = window->findChild<QQuickItem *>("editorPane");
+        auto workspace = window->findChild<QQuickItem *>("workspace");
+        QVERIFY(pane && workspace);
+        QTRY_COMPARE(pane->height(), 250.0);
+        // Dragging the handle up grows the editor, and the height is remembered.
+        const QPoint handle = pane->mapToScene(QPointF(pane->width() / 2, -3)).toPoint();
+        QTest::mouseMove(window, handle);
+        QTest::mousePress(window, Qt::LeftButton, Qt::NoModifier, handle);
+        for (int i = 1; i <= 10; ++i)
+            QTest::mouseMove(window, handle - QPoint(0, i * 20));
+        QTest::mouseRelease(window, Qt::LeftButton, Qt::NoModifier, handle - QPoint(0, 200));
+        QTRY_COMPARE(pane->height(), 450.0);
+        QCOMPARE(deck.editorHeight(), 450.0);
+        QTest::keyClick(window, Qt::Key_Down, Qt::ControlModifier | Qt::AltModifier);
+        QTRY_COMPARE(pane->height(), 370.0);
+        QCOMPARE(deck.editorHeight(), 370.0);
+        // The tall editor leaves the stage its minimum, and returns where it was.
+        const qreal tall = workspace->height() - 166;
+        QTest::keyClick(window, Qt::Key_E, Qt::ControlModifier | Qt::AltModifier);
+        QTRY_COMPARE(pane->height(), tall);
+        QTest::keyClick(window, Qt::Key_Up, Qt::ControlModifier | Qt::AltModifier);
+        QCOMPARE(pane->height(), tall);
+        QTest::keyClick(window, Qt::Key_E, Qt::ControlModifier | Qt::AltModifier);
+        QTRY_COMPARE(pane->height(), 370.0);
+        window->setProperty("allowClose", true);
+        window->close();
+    }
     void presenterViewUsesSeparateScreens() {
         if (!qEnvironmentVariableIsSet("HYPE_GUI_TESTS"))
             QSKIP("Set HYPE_GUI_TESTS=1");

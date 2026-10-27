@@ -113,6 +113,9 @@ class Deck : public QAbstractListModel {
     QStringList mediaPositions() const;
     QString baseDir() const;
     QString dialogDirectory() const;
+    // The editor's height under the slide, kept between sessions; 0 until it is first moved.
+    Q_INVOKABLE double editorHeight() const;
+    Q_INVOKABLE void setEditorHeight(double height);
     QString slide(int index) const;
     bool loadPath(const QString &path, bool remember = true);
     bool reopenLastPresentation();
