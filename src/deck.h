@@ -83,8 +83,10 @@ class Deck : public QAbstractListModel {
     Q_INVOKABLE int stepCount(int index) const;
     // Exports leave hidden slides out unless asked to include them.
     void setIncludeHidden(bool include) { m_includeHidden = include; }
-    // A PDF gives each build step a page of its own, as beamer does, instead of the finished slide.
-    void setExpandSteps(bool expand) { m_expandSteps = expand; }
+    // A PDF gives each build step a page, as beamer does, unless it is a handout: asked for
+    // here, or by `handout: true` or pandoc's `classoption: handout` in the front matter.
+    void setHandout(bool handout) { m_handout = handout; }
+    bool handout() const;
     QVector<int> exportedSlides() const;
     int selected() const { return m_selected; }
     int selectionFirst() const { return qMin(m_anchor, m_selected); }
@@ -211,7 +213,7 @@ class Deck : public QAbstractListModel {
     QTimer m_reloadTimer, m_mediaTimer;
     QString m_notifiedFont;
     bool m_externalChange = false;
-    bool m_includeHidden = false, m_expandSteps = false;
+    bool m_includeHidden = false, m_handout = false;
     QString m_recoveryDirectory, m_checkpointSource, m_checkpointPath;
     QTimer m_autosaveTimer, m_autosaveDeadline;
     bool m_recovering = false;

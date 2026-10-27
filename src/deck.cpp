@@ -598,6 +598,10 @@ bool Deck::writeMedia(const QString &path, const QByteArray &bytes) {
     m_mediaTimer.start();
     return true;
 }
+bool Deck::handout() const {
+    return m_handout || scalar(m_parsed.header, "handout") == "true" ||
+           scalar(m_parsed.header, "classoption").contains("handout");
+}
 QVector<int> Deck::exportedSlides() const {
     QVector<int> slides;
     for (int i = 0; i < count(); ++i)
@@ -1667,18 +1671,19 @@ bool Deck::exportPdf(const QString &path) {
             return false;
         }
         bool first = true;
+        const bool steps = !handout();
         for (int n = 0; n < shown.size(); ++n) {
             const int i = shown[n];
             emit exportAdvanced(double(n) / shown.size(),
                                 QString("Exporting slide %1 of %2").arg(n + 1).arg(shown.size()));
             auto colors = slidePalette(i);
-            for (int step = 0, steps = m_expandSteps ? stepCount(i) : 1; step < steps; ++step) {
+            for (int step = 0, count = steps ? stepCount(i) : 1; step < count; ++step) {
                 if (!first && !writer.newPage()) {
                     setStatus("Could not create PDF page");
                     return false;
                 }
                 first = false;
-                if (m_expandSteps)
+                if (steps)
                     colors["step"] = step;
                 paintSlide(&painter, QRectF(0, 0, writer.width(), writer.height()), slide(i), baseDir(),
                            colors);
