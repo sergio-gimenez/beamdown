@@ -917,6 +917,27 @@ static void write(const QString &path, const QString &content) {
         QCOMPARE(pane->height(), tall);
         QTest::keyClick(window, Qt::Key_E, Qt::ControlModifier | Qt::AltModifier);
         QTRY_COMPARE(pane->height(), 370.0);
+        // The formatting bar's empty space drags the divider too, remembered when it ends.
+        auto note = window->findChild<QQuickItem *>("commentButton");
+        QVERIFY(note);
+        const QPoint grip = note->mapToScene(QPointF(note->width() + 60, note->height() / 2)).toPoint();
+        QTest::mouseMove(window, grip);
+        QTest::mousePress(window, Qt::LeftButton, Qt::NoModifier, grip);
+        for (int i = 1; i <= 10; ++i)
+            QTest::mouseMove(window, grip - QPoint(0, i * 10));
+        QTRY_COMPARE(pane->height(), 470.0);
+        QCOMPARE(deck.editorHeight(), 370.0);
+        QTest::mouseRelease(window, Qt::LeftButton, Qt::NoModifier, grip - QPoint(0, 100));
+        QCOMPARE(deck.editorHeight(), 470.0);
+        // Its buttons still format instead of dragging.
+        auto editor = window->findChild<QQuickItem *>("slideEditor");
+        QVERIFY(editor);
+        editor->forceActiveFocus();
+        QVERIFY(QMetaObject::invokeMethod(editor, "select", Q_ARG(int, 2), Q_ARG(int, 5)));
+        const QPoint bold = window->findChild<QQuickItem *>("boldButton")->mapToScene(QPointF(10, 10)).toPoint();
+        QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, bold);
+        QCOMPARE(deck.slideText(), QString("# **One**"));
+        QCOMPARE(pane->height(), 470.0);
         window->setProperty("allowClose", true);
         window->close();
     }

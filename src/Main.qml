@@ -198,10 +198,11 @@ ApplicationWindow {
     readonly property bool canResizeEditor: !popupOpen && !deck.compressingImage && editorPane.visible && workspace.visible
     // The height the editor returns to when it leaves its tall notes mode.
     property real editorRestoreHeight: 250
-    function resizeEditor(height) {
+    // A drag remembers the height once, when it ends.
+    function resizeEditor(height, remember = true) {
         height = Math.round(Math.max(workspace.editorMinimum, Math.min(workspace.editorMaximum, height)))
         editorPane.SplitView.preferredHeight = height
-        deck.setEditorHeight(height)
+        if (remember) deck.setEditorHeight(height)
     }
     // Tall for long notes, then back to where it was.
     function toggleTallEditor() {
@@ -1042,6 +1043,8 @@ ApplicationWindow {
         id: editorBar
         property string scope: ""
         property real textInset: 24
+        // Below the slide, the bar's empty space drags the divider above it: a bigger grip than the line.
+        property bool resizesEditor: false
         readonly property bool compact: width < 680
         readonly property bool menuOpen: mediaMenu.visible
         Layout.preferredHeight: 48
@@ -1049,55 +1052,77 @@ ApplicationWindow {
             color: win.ui.background
             Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: win.ui.border; opacity: 0.55 }
         }
-        RowLayout {
-            anchors.fill: parent; anchors.leftMargin: editorBar.textInset - 10; anchors.rightMargin: 14; spacing: 2
-            EditorButton { compact: editorBar.compact; objectName: editorBar.scope + "boldButton"; iconName: "bold"; label: "Bold"; description: "Bold (Ctrl+B)"; onClicked: win.formatSlide("bold") }
-            EditorButton { compact: editorBar.compact; objectName: editorBar.scope + "italicButton"; iconName: "italic"; label: "Italic"; description: "Italic (Ctrl+I)"; onClicked: win.formatSlide("italic") }
-            EditorButton { compact: editorBar.compact; objectName: editorBar.scope + "underlineButton"; iconName: "underline"; label: "Underline"; description: "Underline (Ctrl+U)"; onClicked: win.formatSlide("underline") }
-            EditorButton { compact: editorBar.compact; objectName: editorBar.scope + "headlineButton"; iconName: "headline"; label: "Headline"; description: "Headline (Ctrl+H)"; onClicked: win.formatSlide("headline") }
-            EditorButton { compact: editorBar.compact; objectName: editorBar.scope + "codeButton"; iconName: "code"; label: "Code"; description: "Code block (Ctrl+K)"; onClicked: win.formatSlide("code") }
-            EditorButton { compact: editorBar.compact; objectName: editorBar.scope + "commentButton"; iconName: "comment"; label: "Note"; description: "Comment, hidden on slide (Ctrl+/)"; onClicked: win.formatSlide("comment") }
-            Item { Layout.fillWidth: true }
-            EditorButton { compact: editorBar.compact; iconName: "media-add"; label: "Media"; description: "Add image / video"; onClicked: deck.importDialog() }
-            EditorButton {
-                compact: editorBar.compact
-                objectName: editorBar.scope + "mediaOptionsButton"; iconName: "adjust"; label: "Layout"; description: "Image / video options"; menu: true
-                enabled: !!deck.media.url.toString()
-                dropdown: mediaMenu
-                AppMenu {
-                    hasChecks: true
-                    id: mediaMenu; objectName: editorBar.scope + "mediaMenu"; y: parent.height + 4
-                    readonly property bool placed: !!deck.media.position
-                    AppMenuItem { text: "Fit"; checkable: true; checked: !deck.media.span && !mediaMenu.placed; onTriggered: deck.setMediaMode("fit") }
-                    AppMenuItem { text: "Span"; checkable: true; checked: deck.media.span; onTriggered: deck.setMediaMode("span") }
+        // The buttons sit inside the grip, so they keep their clicks and their arrow cursor. A
+        // background would sit below the bar, which takes the press first; one child keeps the
+        // bar sizing itself from the row as before.
+        MouseArea {
+            objectName: editorBar.scope + "editorGrip"
+            anchors.fill: parent
+            implicitWidth: buttonRow.implicitWidth; implicitHeight: buttonRow.implicitHeight
+            // Not disabled when idle: that would disable the buttons inside.
+            readonly property bool active: editorBar.resizesEditor && win.canResizeEditor
+            cursorShape: active ? Qt.SplitVCursor : Qt.ArrowCursor
+            property real pressY: 0
+            property real pressHeight: 0
+            // Scene coordinates, since the bar moves with the divider.
+            onPressed: function(mouse) {
+                if (!active) { mouse.accepted = false; return }
+                pressY = mapToItem(null, mouse.x, mouse.y).y
+                pressHeight = editorPane.height
+            }
+            onPositionChanged: function(mouse) { win.resizeEditor(pressHeight - (mapToItem(null, mouse.x, mouse.y).y - pressY), false) }
+            onReleased: deck.setEditorHeight(editorPane.height)
+            RowLayout {
+                id: buttonRow
+                anchors.fill: parent; anchors.leftMargin: editorBar.textInset - 10; anchors.rightMargin: 14; spacing: 2
+                EditorButton { compact: editorBar.compact; objectName: editorBar.scope + "boldButton"; iconName: "bold"; label: "Bold"; description: "Bold (Ctrl+B)"; onClicked: win.formatSlide("bold") }
+                EditorButton { compact: editorBar.compact; objectName: editorBar.scope + "italicButton"; iconName: "italic"; label: "Italic"; description: "Italic (Ctrl+I)"; onClicked: win.formatSlide("italic") }
+                EditorButton { compact: editorBar.compact; objectName: editorBar.scope + "underlineButton"; iconName: "underline"; label: "Underline"; description: "Underline (Ctrl+U)"; onClicked: win.formatSlide("underline") }
+                EditorButton { compact: editorBar.compact; objectName: editorBar.scope + "headlineButton"; iconName: "headline"; label: "Headline"; description: "Headline (Ctrl+H)"; onClicked: win.formatSlide("headline") }
+                EditorButton { compact: editorBar.compact; objectName: editorBar.scope + "codeButton"; iconName: "code"; label: "Code"; description: "Code block (Ctrl+K)"; onClicked: win.formatSlide("code") }
+                EditorButton { compact: editorBar.compact; objectName: editorBar.scope + "commentButton"; iconName: "comment"; label: "Note"; description: "Comment, hidden on slide (Ctrl+/)"; onClicked: win.formatSlide("comment") }
+                Item { Layout.fillWidth: true }
+                EditorButton { compact: editorBar.compact; iconName: "media-add"; label: "Media"; description: "Add image / video"; onClicked: deck.importDialog() }
+                EditorButton {
+                    compact: editorBar.compact
+                    objectName: editorBar.scope + "mediaOptionsButton"; iconName: "adjust"; label: "Layout"; description: "Image / video options"; menu: true
+                    enabled: !!deck.media.url.toString()
+                    dropdown: mediaMenu
                     AppMenu {
-                        id: placeMenu; objectName: editorBar.scope + "placeMenu"
-                        title: "Place"; hasChecks: true; enabled: !deck.media.video
-                        Instantiator {
-                            model: deck.mediaPositions
-                            delegate: AppMenuItem {
-                                // "bottom-right" reads as "Bottom right".
-                                text: modelData.charAt(0).toUpperCase() + modelData.slice(1).replace("-", " ")
-                                checkable: true; checked: deck.media.position === modelData
-                                onTriggered: deck.setMediaPosition(modelData)
+                        hasChecks: true
+                        id: mediaMenu; objectName: editorBar.scope + "mediaMenu"; y: parent.height + 4
+                        readonly property bool placed: !!deck.media.position
+                        AppMenuItem { text: "Fit"; checkable: true; checked: !deck.media.span && !mediaMenu.placed; onTriggered: deck.setMediaMode("fit") }
+                        AppMenuItem { text: "Span"; checkable: true; checked: deck.media.span; onTriggered: deck.setMediaMode("span") }
+                        AppMenu {
+                            id: placeMenu; objectName: editorBar.scope + "placeMenu"
+                            title: "Place"; hasChecks: true; enabled: !deck.media.video
+                            Instantiator {
+                                model: deck.mediaPositions
+                                delegate: AppMenuItem {
+                                    // "bottom-right" reads as "Bottom right".
+                                    text: modelData.charAt(0).toUpperCase() + modelData.slice(1).replace("-", " ")
+                                    checkable: true; checked: deck.media.position === modelData
+                                    onTriggered: deck.setMediaPosition(modelData)
+                                }
+                                onObjectAdded: (index, item) => placeMenu.insertItem(index, item)
+                                onObjectRemoved: (index, item) => placeMenu.removeItem(item)
                             }
-                            onObjectAdded: (index, item) => placeMenu.insertItem(index, item)
-                            onObjectRemoved: (index, item) => placeMenu.removeItem(item)
                         }
+                        AppMenu {
+                            objectName: editorBar.scope + "sizeMenu"
+                            title: "Size"; hasChecks: true; enabled: mediaMenu.placed
+                            AppMenuItem { text: "Small (10%)"; checkable: true; checked: deck.media.size === 10; onTriggered: deck.setMediaSize(10) }
+                            AppMenuItem { text: "Medium (20%)"; checkable: true; checked: deck.media.size === 20; onTriggered: deck.setMediaSize(20) }
+                            AppMenuItem { text: "Large (35%)"; checkable: true; checked: deck.media.size === 35; onTriggered: deck.setMediaSize(35) }
+                        }
+                        AppMenuSeparator {}
+                        AppMenuItem { text: "Match image edges"; enabled: !mediaMenu.placed; checkable: true; checked: deck.media.background === "auto"; onTriggered: deck.matchImageBackground(true) }
+                        AppMenuItem { text: deck.media.video ? "Blurred first frame" : "Blurred image"; enabled: !mediaMenu.placed; checkable: true; checked: deck.media.background === "blur"; onTriggered: deck.setMediaBackground("blur") }
+                        AppMenuItem { objectName: editorBar.scope + "whiteBackgroundItem"; text: "White"; enabled: !mediaMenu.placed; checkable: true; checked: deck.media.background === "white"; onTriggered: deck.setMediaBackground("white") }
+                        AppMenuItem { text: "Black"; enabled: !mediaMenu.placed; checkable: true; checked: deck.media.background === "black"; onTriggered: deck.setMediaBackground("black") }
+                        AppMenuItem { text: "Use theme color"; enabled: !mediaMenu.placed; checkable: true; checked: deck.media.background === "theme"; onTriggered: deck.matchImageBackground(false) }
                     }
-                    AppMenu {
-                        objectName: editorBar.scope + "sizeMenu"
-                        title: "Size"; hasChecks: true; enabled: mediaMenu.placed
-                        AppMenuItem { text: "Small (10%)"; checkable: true; checked: deck.media.size === 10; onTriggered: deck.setMediaSize(10) }
-                        AppMenuItem { text: "Medium (20%)"; checkable: true; checked: deck.media.size === 20; onTriggered: deck.setMediaSize(20) }
-                        AppMenuItem { text: "Large (35%)"; checkable: true; checked: deck.media.size === 35; onTriggered: deck.setMediaSize(35) }
-                    }
-                    AppMenuSeparator {}
-                    AppMenuItem { text: "Match image edges"; enabled: !mediaMenu.placed; checkable: true; checked: deck.media.background === "auto"; onTriggered: deck.matchImageBackground(true) }
-                    AppMenuItem { text: deck.media.video ? "Blurred first frame" : "Blurred image"; enabled: !mediaMenu.placed; checkable: true; checked: deck.media.background === "blur"; onTriggered: deck.setMediaBackground("blur") }
-                    AppMenuItem { objectName: editorBar.scope + "whiteBackgroundItem"; text: "White"; enabled: !mediaMenu.placed; checkable: true; checked: deck.media.background === "white"; onTriggered: deck.setMediaBackground("white") }
-                    AppMenuItem { text: "Black"; enabled: !mediaMenu.placed; checkable: true; checked: deck.media.background === "black"; onTriggered: deck.setMediaBackground("black") }
-                    AppMenuItem { text: "Use theme color"; enabled: !mediaMenu.placed; checkable: true; checked: deck.media.background === "theme"; onTriggered: deck.matchImageBackground(false) }
                 }
             }
         }
@@ -1852,7 +1877,7 @@ ApplicationWindow {
                     SplitView.preferredHeight: deck.editorHeight() || 250
                     SplitView.minimumHeight: workspace.editorMinimum
                     SplitView.maximumHeight: workspace.editorMaximum
-                    EditorToolbar { id: slideBar; Layout.fillWidth: true }
+                    EditorToolbar { id: slideBar; objectName: "slideBar"; resizesEditor: true; Layout.fillWidth: true }
                     FindBar { id: slideFind; objectName: "slideFindBar"; shown: !win.markdown }
                     Rectangle {
                         objectName: "slideEditorFrame"
