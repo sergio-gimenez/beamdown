@@ -245,7 +245,8 @@ static QString withoutSlidePadding(QString text) {
     text.remove(QRegularExpression("(?:\\r?\\n[ \\t]*)+$"));
     return text.trimmed().isEmpty() ? QString() : text;
 }
-QString Deck::slideText() const { return withoutSlidePadding(slideSource()); }
+QString Deck::slideText() const { return slideTextAt(m_selected); }
+QString Deck::slideTextAt(int index) const { return withoutSlidePadding(slide(index)); }
 QString Deck::speakerNotes() const { return ::speakerNotes(slideSource()); }
 QString Deck::slide(int i) const {
     return i >= 0 && i < count() ? m_parsed.slides[i].source : QString();

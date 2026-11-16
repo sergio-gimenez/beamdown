@@ -920,6 +920,111 @@ static void write(const QString &path, const QString &content) {
         window->setProperty("allowClose", true);
         window->close();
     }
+    void slideTextAtIsWhatTheEditorShows() {
+        Deck deck;
+        deck.editSource("# One\n\n---\n\n\n# Two\n\n\n");
+        QCOMPARE(deck.slideTextAt(1), QString("# Two"));
+        deck.select(1);
+        QCOMPARE(deck.slideTextAt(1), deck.slideText());
+        QCOMPARE(deck.slideTextAt(2), QString());
+    }
+    void findSearchesTheEditorOrEverySlide() {
+        if (!qEnvironmentVariableIsSet("HYPE_GUI_TESTS"))
+            QSKIP("Set HYPE_GUI_TESTS=1");
+        Deck deck;
+        deck.editSource("# Apple pie\n\nApple notes\n\n---\n\n# Banana\n\n---\n\n# apple tart\n");
+        deck.select(0);
+        QQuickStyle::setStyle("Basic");
+        qmlRegisterType<SlideItem>("Hype", 1, 0, "SlideCanvas");
+        qmlRegisterType<AppTheme>("Hype", 1, 0, "AppTheme");
+        QQmlApplicationEngine engine;
+        engine.rootContext()->setContextProperty("deck", &deck);
+        engine.addImageProvider("slides", new Thumbnails(&deck));
+        engine.load(QUrl("qrc:/Main.qml"));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        auto window = qobject_cast<QQuickWindow *>(engine.rootObjects().first());
+        window->resize(1400, 1000);
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        auto editor = window->findChild<QQuickItem *>("slideEditor");
+        auto bar = window->findChild<QQuickItem *>("slideFindBar");
+        auto field = window->findChild<QQuickItem *>("findField");
+        QVERIFY(editor && bar && field);
+        auto selection = [](QQuickItem *item) {
+            return qMakePair(item->property("selectionStart").toInt(), item->property("selectionEnd").toInt());
+        };
+        auto matches = [&] { return window->property("findMatches").toList().size(); };
+        auto type = [&](const char *text) {
+            for (; *text; ++text)
+                *text == '\n' ? QTest::keyClick(window, Qt::Key_Return) : QTest::keyClick(window, *text);
+        };
+        editor->forceActiveFocus();
+        QTRY_VERIFY(editor->hasActiveFocus());
+        // Ctrl+F finds in the slide being edited, from the cursor on, and wraps around.
+        QTest::keyClick(window, Qt::Key_F, Qt::ControlModifier);
+        QTRY_VERIFY(field->hasActiveFocus());
+        QVERIFY(bar->isVisible());
+        type("apple");
+        QCOMPARE(matches(), 2);
+        QCOMPARE(selection(editor), qMakePair(2, 7));
+        QTest::keyClick(window, Qt::Key_Return);
+        QCOMPARE(selection(editor), qMakePair(13, 18));
+        QTest::keyClick(window, Qt::Key_Return);
+        QCOMPARE(selection(editor), qMakePair(2, 7));
+        QCOMPARE(deck.selected(), 0);
+        // Ctrl+Shift+F finds in every slide, moving between them. Up and Down step through
+        // the matches instead of the slides.
+        QTest::keyClick(window, Qt::Key_F, Qt::ControlModifier | Qt::ShiftModifier);
+        QTRY_COMPARE(matches(), 3);
+        QTest::keyClick(window, Qt::Key_Down);
+        QCOMPARE(selection(editor), qMakePair(13, 18));
+        QTest::keyClick(window, Qt::Key_Down);
+        QCOMPARE(deck.selected(), 2);
+        QCOMPARE(editor->property("text").toString(), QString("# apple tart"));
+        QCOMPARE(selection(editor), qMakePair(2, 7));
+        QTest::keyClick(window, Qt::Key_Return, Qt::ShiftModifier);
+        QCOMPARE(deck.selected(), 0);
+        QCOMPARE(selection(editor), qMakePair(13, 18));
+        QTest::keyClick(window, Qt::Key_Up);
+        QCOMPARE(selection(editor), qMakePair(2, 7));
+        QTest::keyClick(window, Qt::Key_D, Qt::ControlModifier);
+        QCOMPARE(deck.count(), 3);
+        QCOMPARE(window->property("findIndex").toInt(), 0);
+        // Escape goes back to the editor with the match still selected.
+        QTest::keyClick(window, Qt::Key_Escape);
+        QTRY_VERIFY(editor->hasActiveFocus());
+        QVERIFY(!bar->isVisible());
+        QCOMPARE(editor->property("selectedText").toString(), QString("Apple"));
+        // In Markdown mode both shortcuts search the whole source, and the sidebar follows.
+        QTest::keyClick(window, Qt::Key_Period, Qt::ControlModifier);
+        auto source = window->findChild<QQuickItem *>("sourceEditor");
+        auto sourceField = window->findChild<QQuickItem *>("source.findField");
+        QVERIFY(source && sourceField);
+        QTRY_VERIFY(source->hasActiveFocus());
+        QTest::keyClick(window, Qt::Key_F, Qt::ControlModifier);
+        QTRY_VERIFY(sourceField->hasActiveFocus());
+        QCOMPARE(sourceField->property("text").toString(), QString("apple"));
+        QCOMPARE(matches(), 3);
+        const int tart = deck.source().lastIndexOf("apple");
+        for (int i = 0; i < 3 && selection(source).first != tart; ++i)
+            QTest::keyClick(window, Qt::Key_Return);
+        QCOMPARE(selection(source), qMakePair(tart, tart + 5));
+        QCOMPARE(deck.selected(), 2);
+        QTest::keyClick(window, Qt::Key_Return);
+        QCOMPARE(selection(source), qMakePair(2, 7));
+        QCOMPARE(deck.selected(), 0);
+        // Typing in the editor keeps the count current.
+        QTest::keyClick(window, Qt::Key_Escape);
+        QTRY_VERIFY(source->hasActiveFocus());
+        QTest::keyClick(window, Qt::Key_F, Qt::ControlModifier);
+        QTRY_COMPARE(sourceField->property("text").toString(), QString("Apple"));
+        source->forceActiveFocus();
+        QTRY_VERIFY(source->hasActiveFocus());
+        QTest::keyClick(window, Qt::Key_End, Qt::ControlModifier);
+        type("\nApple");
+        QTRY_COMPARE(matches(), 4);
+        window->setProperty("allowClose", true);
+        window->close();
+    }
     void presenterViewUsesSeparateScreens() {
         if (!qEnvironmentVariableIsSet("HYPE_GUI_TESTS"))
             QSKIP("Set HYPE_GUI_TESTS=1");

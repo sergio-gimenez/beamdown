@@ -24,6 +24,8 @@ In **Visual** mode, select a slide in the sidebar and write its Markdown below t
 
 The buttons above the editor apply bold, italic, underline, headlines, code blocks, and hidden comments to your selection. Hype reads `*asterisks*` as italic and `_underscores_` as underline. **Media** adds an image or video; **Layout** opens its layout and background options.
 
+Press **Ctrl+F** to find text in the slide you are editing, or **Ctrl+Shift+F** to find it in every slide; **All slides** in the find bar switches between the two. Matching ignores case. **Enter** or **Down** goes to the next match and **Shift+Enter** or **Up** to the previous one, changing slides as it goes. **Escape** closes the bar and leaves the match selected in the editor. In Markdown mode both shortcuts search the whole presentation.
+
 Use **Ctrl+Enter** or right-click a slide to add a slide after the selection. Drag slides to rearrange them—their Markdown moves with them. Hold a dragged slide near the top or bottom of the sidebar or overview to scroll further. Select several slides with **Shift+click** or **Shift+arrows** to move, duplicate, or delete them together.
 
 Hype saves automatically after a one-second typing pause, or every five seconds while you keep typing. Use **Ctrl+S** to choose a file for a new presentation or save immediately. Hype remembers the last directory you opened or saved to.
@@ -226,6 +228,7 @@ Slide navigation and selection shortcuts apply when the sidebar or preview has f
 | Ctrl+Alt+E | Tall editor on / off |
 | Ctrl+B / Ctrl+I / Ctrl+U | Bold / italic / underline |
 | Ctrl+H / Ctrl+K / Ctrl+/ | Headline / code block / hidden comment |
+| Ctrl+F / Ctrl+Shift+F | Find in the text box / in all slides |
 | ? / F1 | Show all shortcuts (F1 also works while typing) |
 | Tab / Shift+Tab | Switch between sidebar and Markdown input |
 | Arrow keys | Previous / next slide when the slide list has focus; up and down move by a row in Overview |

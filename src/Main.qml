@@ -213,6 +213,11 @@ ApplicationWindow {
         }
     }
     function editorKey(editor, flick, event) {
+        if (event.key === Qt.Key_Escape && finding) {
+            event.accepted = true
+            closeFind()
+            return
+        }
         if ((event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) && !(event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))) {
             event.accepted = true
             switchEditingFocus()
@@ -275,6 +280,113 @@ ApplicationWindow {
         slideEditor.forceActiveFocus()
         deck.editSlide(edit.text)
         slideEditor.select(edit.start, edit.end)
+    }
+    // Ctrl+F finds in the text box on screen, Ctrl+Shift+F in every slide. Markdown mode's
+    // text box already holds the whole presentation, so there both search all of it.
+    property bool finding: false
+    property bool findAll: false
+    property string findQuery: ""
+    // Each match is { slide, start, end }, with positions in the editor's text; in Markdown
+    // mode, positions in the source and slide -1.
+    property var findMatches: []
+    property int findIndex: -1
+    // Moving to a match changes the selected slide, which must not search again.
+    property bool findMoving: false
+    function openFind(all) {
+        if (overview) setMode(editingMode)
+        const editor = markdown ? sourceEditor : slideEditor
+        // A selection on one line is what you want to find.
+        const picked = editor.activeFocus ? editor.selectedText : ""
+        if (picked && picked.indexOf("\n") < 0 && picked.indexOf(String.fromCharCode(0x2029)) < 0) findQuery = picked
+        findAll = all
+        finding = true
+        refreshFind(true)
+        Qt.callLater(function() { (markdown ? sourceFind : slideFind).focusField() })
+    }
+    function closeFind() {
+        finding = false
+        findMatches = []
+        findIndex = -1
+        // The match stays selected, ready to type over.
+        const editor = markdown ? sourceEditor : slideEditor
+        editor.forceActiveFocus()
+    }
+    function findIn(text, slide) {
+        const found = []
+        const pattern = new RegExp(findQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "giu")
+        for (let m = pattern.exec(text); m; m = pattern.exec(text))
+            found.push({ slide: slide, start: m.index, end: m.index + m[0].length })
+        return found
+    }
+    // Searches again after an edit or a new query; with jump, selects the first match from
+    // the cursor on, so typing a longer query stays on the match it started from.
+    function refreshFind(jump) {
+        let matches = []
+        if (finding && findQuery) {
+            if (markdown) matches = findIn(sourceEditor.text, -1)
+            else if (!findAll) matches = findIn(slideEditor.text, deck.selected)
+            // The selected slide is searched as typed, before the deck trims its blank lines.
+            else for (let i = 0; i < deck.count; ++i)
+                matches = matches.concat(findIn(i === deck.selected ? slideEditor.text : deck.slideTextAt(i), i))
+        }
+        findMatches = matches
+        const slide = markdown ? -1 : deck.selected
+        const from = (markdown ? sourceEditor : slideEditor).selectionStart
+        const next = matches.findIndex(m => m.slide > slide || (m.slide === slide && m.start >= from))
+        findIndex = next >= 0 ? next : matches.length ? 0 : -1
+        if (jump) showMatch()
+    }
+    function matchShown() {
+        const match = findMatches[findIndex]
+        const editor = markdown ? sourceEditor : slideEditor
+        return !!match && (markdown || match.slide === deck.selected)
+            && editor.selectionStart === match.start && editor.selectionEnd === match.end
+    }
+    function stepFind(delta) {
+        const count = findMatches.length
+        if (!count) return
+        // Away from a match, the next one is the one after the cursor, already picked.
+        if (delta < 0 || matchShown()) findIndex = (findIndex + delta + count) % count
+        showMatch()
+    }
+    function showMatch() {
+        const match = findMatches[findIndex]
+        if (!match) return
+        findMoving = true
+        // Follow the match in the sidebar first: changing slides resets the editor's cursor.
+        if (markdown) deck.selectAt(match.start)
+        else if (match.slide !== deck.selected) deck.select(match.slide)
+        findMoving = false
+        const editor = markdown ? sourceEditor : slideEditor
+        editor.select(match.start, match.end)
+        revealMatch(editor, markdown ? sourceFlick : slideScroll.contentItem, match)
+    }
+    function revealMatch(editor, flick, match) {
+        // After the new slide's own scroll to the top, which is also deferred.
+        Qt.callLater(function() {
+            const first = editor.positionToRectangle(match.start)
+            const last = editor.positionToRectangle(match.end)
+            const end = editor.positionToRectangle(editor.length)
+            const margin = 24
+            const maxY = Math.max(0, end.y + end.height + editor.bottomPadding - flick.height)
+            if (first.y - margin < flick.contentY) flick.contentY = Math.max(0, first.y - margin)
+            else if (last.y + last.height + margin > flick.contentY + flick.height)
+                flick.contentY = Math.min(maxY, last.y + last.height + margin - flick.height)
+            if (flick.contentWidth <= flick.width) return
+            const maxX = flick.contentWidth - flick.width
+            const left = Math.min(first.x, last.x), right = Math.max(first.x, last.x)
+            if (left - margin < flick.contentX) flick.contentX = Math.max(0, left - margin)
+            else if (right + margin > flick.contentX + flick.width)
+                flick.contentX = Math.min(maxX, right + margin - flick.width)
+        })
+    }
+    // Deferred until the editors hold the new slide or mode's text.
+    function refreshFindLater() { if (finding) refreshFind(false) }
+    onMarkdownChanged: Qt.callLater(refreshFindLater)
+    Connections {
+        target: deck
+        // Edits and slide changes both arrive here; Deck::changed is always followed by this.
+        function onSelectionChanged() { if (win.finding && !win.findMoving) Qt.callLater(win.refreshFindLater) }
     }
     // An existing presentation opens for browsing; a new one opens ready to type.
     function focusForDeck(existing) {
@@ -725,6 +837,8 @@ ApplicationWindow {
     Shortcut { sequence: "F1"; enabled: !win.popupOpen && !deck.compressingImage && !win.presenting; onActivated: shortcutsOverlay.open() }
     Shortcut { sequence: "Ctrl+M"; enabled: !win.popupOpen && !deck.compressingImage && (!win.presenting); onActivated: win.toggleOverview() }
     Shortcut { sequence: "Ctrl+."; enabled: !win.popupOpen && !deck.compressingImage && (!win.presenting); onActivated: win.toggleSource() }
+    Shortcut { sequence: "Ctrl+F"; enabled: !win.popupOpen && !deck.compressingImage && !win.presenting; onActivated: win.openFind(false) }
+    Shortcut { sequence: "Ctrl+Shift+F"; enabled: !win.popupOpen && !deck.compressingImage && !win.presenting; onActivated: win.openFind(true) }
     Shortcut { sequence: "Ctrl+B"; enabled: win.canFormat; onActivated: win.formatSlide("bold") }
     Shortcut { sequence: "Ctrl+I"; enabled: win.canFormat; onActivated: win.formatSlide("italic") }
     Shortcut { sequence: "Ctrl+U"; enabled: win.canFormat; onActivated: win.formatSlide("underline") }
@@ -988,6 +1102,70 @@ ApplicationWindow {
             }
         }
     }
+    // Sits under an editor's formatting bar while finding; the match shows as the editor's selection.
+    component FindBar: Rectangle {
+        id: findBar
+        property string scope: ""
+        property real textInset: 24
+        // Whether this bar's editor is the one on screen.
+        property bool shown: false
+        function focusField() { findField.forceActiveFocus(); findField.selectAll() }
+        visible: win.finding && shown
+        Layout.fillWidth: true; Layout.preferredHeight: 44
+        color: win.ui.background
+        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: win.ui.border; opacity: 0.55 }
+        RowLayout {
+            anchors.fill: parent; anchors.leftMargin: findBar.textInset - 10; anchors.rightMargin: 14; spacing: 6
+            TextField {
+                id: findField; objectName: findBar.scope + "findField"
+                Accessible.name: "Find"
+                Layout.fillWidth: true; Layout.maximumWidth: 360; implicitHeight: 32
+                font.pixelSize: 14; color: win.ui.foreground
+                selectionColor: win.ui.selection; selectedTextColor: win.ui.selectionText
+                leftPadding: 10; rightPadding: 10; topPadding: 0; bottomPadding: 0
+                placeholderText: win.markdown ? "Find in presentation" : win.findAll ? "Find in all slides" : "Find in this slide"
+                background: Rectangle { color: win.ui.background; radius: win.softRadius; border.color: findField.activeFocus ? win.ui.accent : win.ui.border }
+                text: win.findQuery
+                onTextEdited: { win.findQuery = text; win.refreshFind(true) }
+                // Window shortcuts would move, select or duplicate slides; here these keys belong to the search.
+                Keys.onShortcutOverride: function(event) {
+                    if ([Qt.Key_Up, Qt.Key_Down, Qt.Key_PageUp, Qt.Key_PageDown].indexOf(event.key) >= 0
+                        || (event.key === Qt.Key_D && (event.modifiers & Qt.ControlModifier)))
+                        event.accepted = true
+                }
+                Keys.onPressed: function(event) {
+                    const enter = event.key === Qt.Key_Return || event.key === Qt.Key_Enter
+                    if (enter || event.key === Qt.Key_Up || event.key === Qt.Key_Down) {
+                        event.accepted = true
+                        win.stepFind(event.key === Qt.Key_Up || (enter && (event.modifiers & Qt.ShiftModifier)) ? -1 : 1)
+                    } else if (event.key === Qt.Key_PageUp || event.key === Qt.Key_PageDown
+                               || (event.key === Qt.Key_D && (event.modifiers & Qt.ControlModifier)))
+                        event.accepted = true // Claimed from the window above; nothing to do with them here.
+                }
+                Keys.onEscapePressed: win.closeFind()
+            }
+            Label {
+                objectName: findBar.scope + "findCount"
+                text: !win.findQuery ? "" : win.findMatches.length ? (win.findIndex + 1) + " of " + win.findMatches.length : "No results"
+                font.pixelSize: 13; color: win.ui.muted
+                Layout.leftMargin: 4
+            }
+            Item { Layout.fillWidth: true }
+            ToolButton {
+                id: scopeButton; objectName: findBar.scope + "findScopeButton"
+                visible: !win.markdown; focusPolicy: Qt.NoFocus
+                Layout.preferredHeight: 28; leftPadding: 10; rightPadding: 10; topPadding: 0; bottomPadding: 0
+                Accessible.name: "Search all slides"; Accessible.checkable: true; Accessible.checked: win.findAll
+                ToolTip.visible: hovered; ToolTip.text: win.findAll ? "Searching every slide (Ctrl+Shift+F)" : "Searching this slide (Ctrl+F)"
+                onClicked: { win.findAll = !win.findAll; win.refreshFind(true) }
+                contentItem: Label { text: "All slides"; font.pixelSize: 13; color: win.findAll ? win.ui.accent : scopeButton.hovered ? win.ui.foreground : win.ui.muted; verticalAlignment: Text.AlignVCenter }
+                background: Rectangle { radius: win.softRadius; color: scopeButton.hovered ? win.ui.hover : "transparent"; border.color: win.findAll ? win.ui.accent : win.ui.border }
+            }
+            EditorButton { compact: true; iconName: "chevron-up"; label: "Previous"; description: "Previous match (Shift+Enter)"; enabled: win.findMatches.length > 0; onClicked: win.stepFind(-1) }
+            EditorButton { compact: true; iconName: "chevron-down"; label: "Next"; description: "Next match (Enter)"; enabled: win.findMatches.length > 0; onClicked: win.stepFind(1) }
+            EditorButton { compact: true; iconName: "close"; label: "Close"; description: "Close (Esc)"; onClicked: win.closeFind() }
+        }
+    }
     header: ToolBar {
         id: topBar
         visible: !win.presenting; height: visible ? 60 : 0
@@ -1191,6 +1369,7 @@ ApplicationWindow {
                 ["Ctrl+B", "Bold"], ["Ctrl+I", "Italic"], ["Ctrl+U", "Underline"], ["Ctrl+H", "Headline"], ["Ctrl+K", "Code block"],
                 ["Ctrl+Up / Down", "Previous or next slide"], ["Ctrl+Page Up / Page Down", "Jump five slides"],
                 ["Ctrl+/", "Comment, hidden on slide"],
+                ["Ctrl+F", "Find in the text box"], ["Ctrl+Shift+F", "Find in all slides"],
                 ["Home / End", "Start or end of the line"], ["Ctrl+Z", "Undo"], ["Ctrl+Shift+Z", "Redo"], ["Ctrl+V", "Paste text, or add and name media"] ] }
         ]
         contentItem: ColumnLayout {
@@ -1674,6 +1853,7 @@ ApplicationWindow {
                     SplitView.minimumHeight: workspace.editorMinimum
                     SplitView.maximumHeight: workspace.editorMaximum
                     EditorToolbar { id: slideBar; Layout.fillWidth: true }
+                    FindBar { id: slideFind; objectName: "slideFindBar"; shown: !win.markdown }
                     Rectangle {
                         objectName: "slideEditorFrame"
                         Layout.fillWidth: true; Layout.fillHeight: true
@@ -1714,6 +1894,7 @@ ApplicationWindow {
             Layout.fillWidth: true; Layout.fillHeight: true
             Layout.margins: win.inset; Layout.leftMargin: 0
             EditorToolbar { id: sourceBar; scope: "source."; textInset: sourceEditor.leftPadding; Layout.fillWidth: true }
+            FindBar { id: sourceFind; objectName: "sourceFindBar"; scope: "source."; textInset: sourceEditor.leftPadding; shown: win.markdown }
             Rectangle {
                 objectName: "sourceEditorFrame"
                 Layout.fillWidth: true; Layout.fillHeight: true
