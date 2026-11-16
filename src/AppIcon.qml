@@ -5,7 +5,7 @@ Item {
     id: icon
     required property string name
     property color color: "black"
-    readonly property bool outlined: ["open", "save", "overview", "visual", "markdown", "code", "check", "file", "history", "export", "bold", "italic", "underline", "headline", "comment", "media-add", "adjust", "chevron-down"].indexOf(name) >= 0
+    readonly property bool outlined: ["open", "save", "overview", "visual", "markdown", "code", "check", "file", "history", "export", "bold", "italic", "underline", "headline", "comment", "media-add", "adjust", "chevron-down", "chevron-up", "close"].indexOf(name) >= 0
     readonly property real canvasSize: name === "open" || name === "save" ? 16 : 24
     implicitWidth: 24; implicitHeight: 24
     Shape {
@@ -40,6 +40,8 @@ Item {
                     : icon.name === "media-add" ? "M13 3H3V21H21V11 M3 17L8 12L12 16L15 13L21 19 M19 2V8 M16 5H22 M9 7A1 1 0 1 0 9 9A1 1 0 1 0 9 7"
                     : icon.name === "chevron-down" ? "M6 9L12 15L18 9"
                     : icon.name === "chevron-right" ? "M9 6L15 12L9 18"
+                    : icon.name === "chevron-up" ? "M6 15L12 9L18 15"
+                    : icon.name === "close" ? "M6 6L18 18 M18 6L6 18"
                     : icon.name === "adjust" ? "M3 6H7 M11 6H21 M7 3V9H11V3Z M3 18H13 M17 18H21 M13 15V21H17V15Z"
                     : icon.name === "save" ? "M2.5 2.5H10.5L13.5 5.5V13.5H2.5Z M5.5 2.5V6H10V2.5 M4.5 13.5V9.5H11.5V13.5"
                     : "M2.5 13V3.5H6.5L8.5 5.5H13.5V13Z"

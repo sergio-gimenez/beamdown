@@ -74,6 +74,8 @@ class Deck : public QAbstractListModel {
     QString source() const { return m_source; }
     QString slideSource() const;
     QString slideText() const;
+    // A slide's Markdown as the slide editor shows it, for searching every slide.
+    Q_INVOKABLE QString slideTextAt(int index) const;
     QString speakerNotes() const;
     bool selectionHidden() const;
     Q_INVOKABLE bool isHidden(int index) const;
