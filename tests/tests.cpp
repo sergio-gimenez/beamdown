@@ -260,7 +260,7 @@ static void write(const QString &path, const QString &content) {
         QCOMPARE(light.colors().value("sidebar").value<QColor>(), QColor("#ebebed"));
         // Both styles name the same colors as an Omarchy theme, and a few more.
         QCOMPARE(AppTheme::adwaitaColors(true, Qt::red).keys(), AppTheme::adwaitaColors(false, Qt::red).keys());
-        // An Omarchy theme turns it back into Hype's own look.
+        // An Omarchy theme brings back the Omarchy look.
         QVERIFY(QDir().mkpath(none.filePath("theme")));
         write(none.filePath("theme/colors.toml"), "background = '#101020'\n");
         QTRY_VERIFY(!light.adwaita());
@@ -375,7 +375,7 @@ static void write(const QString &path, const QString &content) {
         QVERIFY(!first.loadPath(files.path() + "/missing/talk.md"));
         QVERIFY(!first.savePath(files.path() + "/missing/copy.md"));
         QCOMPARE(next.dialogDirectory(), saved);
-        QSettings persisted(QSettings::IniFormat, QSettings::UserScope, "hype", "hype");
+        QSettings persisted(QSettings::IniFormat, QSettings::UserScope, "beamdown", "beamdown");
         QCOMPARE(persisted.value("files/lastDirectory").toString(), saved);
         QVERIFY(QFile::exists(persisted.fileName()));
         QVERIFY(QDir(saved).removeRecursively());
@@ -383,7 +383,7 @@ static void write(const QString &path, const QString &content) {
         QVERIFY(QDir(next.dialogDirectory()).exists());
     }
     void reopensLastPresentation() {
-        QSettings settings(QSettings::IniFormat, QSettings::UserScope, "hype", "hype");
+        QSettings settings(QSettings::IniFormat, QSettings::UserScope, "beamdown", "beamdown");
         settings.remove("files/lastPresentation");
         Deck first;
         const QString initial = first.source();
@@ -1617,7 +1617,7 @@ static void write(const QString &path, const QString &content) {
         const Diagram drawn = mermaidDiagram(flow, deck);
         QVERIFY2(drawn.error.isEmpty(), qPrintable(drawn.error));
         QVERIFY(QSvgRenderer(drawn.svg).isValid());
-        QCOMPARE(QDir(cache.filePath("hype/mermaid")).entryList({"*.svg"}).size(), 1);
+        QCOMPARE(QDir(cache.filePath("beamdown/mermaid")).entryList({"*.svg"}).size(), 1);
         QCOMPARE(mermaidDiagram(flow, deck).svg, drawn.svg);
         // Mermaid's own theme draws it differently from the deck's colors.
         auto github = deck;
@@ -1667,7 +1667,7 @@ static void write(const QString &path, const QString &content) {
         QVERIFY(!formula.outline.isEmpty());
         // The baseline sits at y = 0: the subscript hangs below it.
         QVERIFY(formula.box.top() < 0 && formula.box.bottom() > 0);
-        QCOMPARE(QDir(cache.filePath("hype/math")).entryList({"*.svg"}).size(), 1);
+        QCOMPARE(QDir(cache.filePath("beamdown/math")).entryList({"*.svg"}).size(), 1);
         // Displayed, a sum is set larger than in a line.
         QVERIFY(typesetFormula({"\\sum_{i=1}^n i", true}, false).box.height() >
                 typesetFormula({"\\sum_{i=1}^n i", false}, false).box.height());
@@ -2332,7 +2332,7 @@ static void write(const QString &path, const QString &content) {
         QCOMPARE(withMedia(examples, replacement), examples + "\n" + replacement + "\n");
     }
     void asynchronousExport() {
-        const QString executable = QFINDTESTDATA("../build/hype");
+        const QString executable = QFINDTESTDATA("../build/beamdown");
         QVERIFY(!executable.isEmpty());
         QTemporaryDir tmp;
         Deck deck(nullptr, executable);
@@ -4257,6 +4257,27 @@ static void write(const QString &path, const QString &content) {
         QCOMPARE(reopened.fontName(), family);
         d.undo();
         QCOMPARE(d.source(), original);
+    }
+    void adoptsHypeSettingsAndDraftsOnce() {
+        QTemporaryDir home;
+        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, home.filePath("config"));
+        const auto restore = qScopeGuard([&] {
+            QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDirectory.path());
+        });
+        QSettings(QSettings::IniFormat, QSettings::UserScope, "hype", "hype").setValue("window/editorHeight", 321);
+        QVERIFY(QDir().mkpath(home.filePath("state/hype/recovery/draft")));
+        write(home.filePath("state/hype/recovery/draft/latest.json"), "{}");
+        Deck::adoptHypeData(home.filePath("state/beamdown"));
+        QCOMPARE(Deck().editorHeight(), 321.0);
+        QVERIFY(QFile::exists(home.filePath("state/beamdown/recovery/draft/latest.json")));
+        QVERIFY(!QFile::exists(home.filePath("state/hype/recovery")));
+        // Hype keeps its settings, and later runs leave Beamdown's own alone.
+        QCOMPARE(QSettings(QSettings::IniFormat, QSettings::UserScope, "hype", "hype").value("window/editorHeight").toInt(), 321);
+        Deck().setEditorHeight(400);
+        QVERIFY(QDir().mkpath(home.filePath("state/hype/recovery/newer")));
+        Deck::adoptHypeData(home.filePath("state/beamdown"));
+        QCOMPARE(Deck().editorHeight(), 400.0);
+        QVERIFY(!QFile::exists(home.filePath("state/beamdown/recovery/newer")));
     }
     void bundledThemes() {
         Deck d;

@@ -10,7 +10,7 @@ ApplicationWindow {
     id: win
     width: 1400; height: 900; minimumWidth: 900; minimumHeight: 600
     visible: true
-    title: deck.title + (deck.dirty ? " •" : "") + " — Hype"
+    title: deck.title + (deck.dirty ? " •" : "") + " — Beamdown"
     AppTheme { id: appTheme }
     readonly property var ui: appTheme.colors
     readonly property int rounding: appTheme.rounding
@@ -1208,8 +1208,9 @@ ApplicationWindow {
         Label {
             id: logo; objectName: "hypeLogo"
             anchors.left: parent.left; anchors.leftMargin: win.inset; anchors.verticalCenter: parent.verticalCenter
-            text: "Hype"; font.pixelSize: 22; font.bold: true
-            color: logoHover.hovered ? win.ui.accentHover : win.ui.accent
+            // GNOME header bars name the app quietly; Omarchy's wordmark is loud.
+            text: "Beamdown"; font.pixelSize: appTheme.adwaita ? 17 : 22; font.bold: true
+            color: logoHover.hovered ? win.ui.accentHover : appTheme.adwaita ? win.ui.foreground : win.ui.accent
             Accessible.role: Accessible.Button; Accessible.name: "Keyboard shortcuts"
             ToolTip.visible: logoHover.hovered; ToolTip.delay: 400; ToolTip.text: "Keyboard shortcuts (?)"
             HoverHandler { id: logoHover; cursorShape: Qt.PointingHandCursor }

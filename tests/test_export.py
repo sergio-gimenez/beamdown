@@ -11,7 +11,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 import zlib
 
-APP = Path(__file__).resolve().parents[1] / 'build/hype'
+APP = Path(__file__).resolve().parents[1] / 'build/beamdown'
 NS = {'p': 'http://schemas.openxmlformats.org/presentationml/2006/main',
       'a': 'http://schemas.openxmlformats.org/drawingml/2006/main',
       'r': 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'}
@@ -49,7 +49,7 @@ class ExportTests(unittest.TestCase):
         image(self.root / 'images/photo.png')
         tools = self.root / 'tools'
         tools.mkdir()
-        self.app = tools / 'hype'
+        self.app = tools / 'beamdown'
         shutil.copy2(APP, self.app)
         for tool in ['ffmpeg', 'ffprobe', 'source-highlight']:
             (tools / tool).symlink_to(shutil.which(tool))

@@ -269,10 +269,10 @@ QByteArray slideXml(const PowerPointSlide &slide) {
 }
 QByteArray themeXml() {
     return xml([](Writer &x) {
-        start(x, "a:theme", {{"name", "Hype"}});
+        start(x, "a:theme", {{"name", "Beamdown"}});
         x.writeNamespace(ans, "a");
         start(x, "a:themeElements");
-        start(x, "a:clrScheme", {{"name", "Hype"}});
+        start(x, "a:clrScheme", {{"name", "Beamdown"}});
         const QList<QPair<QString, QString>> colors = {
             {"dk1", "000000"},     {"lt1", "FFFFFF"},     {"dk2", "222222"},
             {"lt2", "EEEEEE"},     {"accent1", "4472C4"}, {"accent2", "ED7D31"},
@@ -284,7 +284,7 @@ QByteArray themeXml() {
             x.writeEndElement();
         }
         x.writeEndElement();
-        start(x, "a:fontScheme", {{"name", "Hype"}});
+        start(x, "a:fontScheme", {{"name", "Beamdown"}});
         for (const auto &type : {"a:majorFont", "a:minorFont"}) {
             start(x, type);
             element(x, "a:latin", {{"typeface", "Arial"}});
@@ -293,7 +293,7 @@ QByteArray themeXml() {
             x.writeEndElement();
         }
         x.writeEndElement();
-        start(x, "a:fmtScheme", {{"name", "Hype"}});
+        start(x, "a:fmtScheme", {{"name", "Beamdown"}});
         const auto fill = [&] {
             start(x, "a:solidFill");
             element(x, "a:schemeClr", {{"val", "phClr"}});
@@ -521,7 +521,7 @@ bool writePptx(const QString &manifestPath, const QString &destination, QString 
                 "http://schemas.openxmlformats.org/package/2006/metadata/core-properties", "cp");
             x.writeNamespace("http://purl.org/dc/elements/1.1/", "dc");
             x.writeTextElement("dc:title", deck["title"].toString());
-            x.writeTextElement("dc:creator", "Hype");
+            x.writeTextElement("dc:creator", "Beamdown");
             x.writeEndElement();
         }));
     put("ppt/presentation.xml", xml([&](Writer &x) {

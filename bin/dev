@@ -8,14 +8,14 @@ mkdir -p "$HYPE_ROOT/build"
 exec 9>"$HYPE_ROOT/build/dev-build.lock"
 flock 9
 if ! "$HYPE_ROOT/bin/build" >"$HYPE_ROOT/build/dev-build.log" 2>&1; then
-    printf 'Hype build failed. See %s\n' "$HYPE_ROOT/build/dev-build.log" >&2
-    notify-send --app-name="Hype (Development)" --icon="$HYPE_ROOT/pkgbuild/hype.svg" \
-        --urgency=critical "Hype build failed" \
+    printf 'Beamdown build failed. See %s\n' "$HYPE_ROOT/build/dev-build.log" >&2
+    notify-send --app-name="Beamdown (Development)" --icon="$HYPE_ROOT/pkgbuild/beamdown.svg" \
+        --urgency=critical "Beamdown build failed" \
         "See $HYPE_ROOT/build/dev-build.log" || true
     exit 1
 fi
 exec 9>&-
 
 cd "$HYPE_ROOT"
-export HYPE_DESKTOP_FILE=hype-dev
-exec "$HYPE_ROOT/build/hype" open "$@" >>"$HYPE_ROOT/build/dev-run.log" 2>&1
+export HYPE_DESKTOP_FILE=beamdown-dev
+exec "$HYPE_ROOT/build/beamdown" open "$@" >>"$HYPE_ROOT/build/dev-run.log" 2>&1

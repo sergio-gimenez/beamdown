@@ -1,8 +1,8 @@
 QT += core gui qml quick quickcontrols2 multimedia concurrent dbus svg
-# Like Qt's own modules, Hype never throws or catches. Without unwinding tables and with
+# Like Qt's own modules, Beamdown never throws or catches. Without unwinding tables and with
 # link-time optimization, the installed binary is about a quarter smaller.
 CONFIG += c++17 release ltcg exceptions_off
-TARGET = hype
+TARGET = beamdown
 TEMPLATE = app
 HEADERS += src/deck.h src/renderer.h src/budget.h
 SOURCES += src/main.cpp src/deck.cpp src/renderer.cpp

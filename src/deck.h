@@ -123,6 +123,8 @@ class Deck : public QAbstractListModel {
     QString slide(int index) const;
     bool loadPath(const QString &path, bool remember = true);
     bool reopenLastPresentation();
+    // Beamdown began as Hype: carries Hype's settings and recovery drafts over, once.
+    static void adoptHypeData(const QString &stateDirectory);
     bool savePath(const QString &path);
     bool saveCopyPath(const QString &path);
     void enableAutosave(const QString &recoveryDirectory = {});

@@ -79,7 +79,7 @@ bool Deck::checkpoint() {
     }
     m_checkpointSource = m_source;
     m_checkpointPath = m_path;
-    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "hype", "hype");
+    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "beamdown", "beamdown");
     settings.setValue("files/lastRecoveryDocument", m_path);
     settings.sync();
     return true;
@@ -96,7 +96,7 @@ bool Deck::flushAutosave() {
         if (!complete) setStatus("Draft backed up · finish the Markdown to save the presentation");
         else if (!m_externalChange) {
             savePath(m_path);
-        } else setStatus("Draft backed up · file changed outside Hype; use Save As to keep both");
+        } else setStatus("Draft backed up · file changed outside Beamdown; use Save As to keep both");
     } else if (m_path.isEmpty()) setStatus("Draft backed up · Ctrl+S to choose a file");
     return true; // A recoverable draft is sufficient to close, even if the file cannot be saved.
 }
@@ -136,7 +136,7 @@ bool Deck::restoreSnapshot(const QByteArray &bytes, bool opening) {
     m_checkpointSource = source;
     m_checkpointPath = m_path;
     if (opening && dirty())
-        setStatus(conflict ? "Recovered draft · file also changed outside Hype; use Save As to keep both"
+        setStatus(conflict ? "Recovered draft · file also changed outside Beamdown; use Save As to keep both"
                            : "Recovered your last draft");
     if (!opening) setStatus("Restored earlier version");
     return true;

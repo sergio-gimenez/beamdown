@@ -13,9 +13,9 @@ Native text includes mixed slides with an image and separate text. Artwork-only 
 ## Open and inspect
 
 ```sh
-./build/hype trials/rails-world-2023/presentation.md
-./build/hype trials/rails-world-2024/presentation.md
-./build/hype trials/rails-world-2025/presentation.md
+./build/beamdown trials/rails-world-2023/presentation.md
+./build/beamdown trials/rails-world-2024/presentation.md
+./build/beamdown trials/rails-world-2025/presentation.md
 ```
 
 Each directory contains `presentation.md`, `images/`, `videos/`, `import-report.json`, rendered PNGs, a PDF, and a rendered PowerPoint. The private source material and derived artifacts are excluded from Git under `trials/`.

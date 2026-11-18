@@ -168,7 +168,7 @@ Deck::Deck(QObject *parent, const QString &exportProgram) : QAbstractListModel(p
             return;
         if (!file.open(QIODevice::ReadOnly)) {
             m_externalChange = true;
-            setStatus("Presentation changed or was removed outside Hype.");
+            setStatus("Presentation changed or was removed outside Beamdown.");
             return;
         }
         const QString disk = QString::fromUtf8(file.readAll());
@@ -878,7 +878,7 @@ void Deck::notifyChanged() {
     }
 }
 QString Deck::dialogDirectory() const {
-    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "hype", "hype");
+    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "beamdown", "beamdown");
     const QString last = settings.value("files/lastDirectory").toString();
     if (!last.isEmpty() && QDir(last).exists())
         return last;
@@ -888,18 +888,29 @@ QString Deck::dialogDirectory() const {
     return !documents.isEmpty() && QDir(documents).exists() ? documents : QDir::homePath();
 }
 double Deck::editorHeight() const {
-    return QSettings(QSettings::IniFormat, QSettings::UserScope, "hype", "hype").value("window/editorHeight").toDouble();
+    return QSettings(QSettings::IniFormat, QSettings::UserScope, "beamdown", "beamdown").value("window/editorHeight").toDouble();
 }
 void Deck::setEditorHeight(double height) {
-    QSettings(QSettings::IniFormat, QSettings::UserScope, "hype", "hype").setValue("window/editorHeight", qRound(height));
+    QSettings(QSettings::IniFormat, QSettings::UserScope, "beamdown", "beamdown").setValue("window/editorHeight", qRound(height));
+}
+void Deck::adoptHypeData(const QString &stateDirectory) {
+    // Settings are copied, so Hype keeps its own; drafts move, so only one app restores them.
+    const QString settings = QSettings(QSettings::IniFormat, QSettings::UserScope, "beamdown", "beamdown").fileName();
+    const QString hype = QSettings(QSettings::IniFormat, QSettings::UserScope, "hype", "hype").fileName();
+    if (!QFileInfo::exists(settings) && QFileInfo::exists(hype) && QDir().mkpath(QFileInfo(settings).absolutePath()))
+        QFile::copy(hype, settings);
+    const QString recovery = stateDirectory + "/recovery";
+    const QString hypeRecovery = QFileInfo(stateDirectory).absolutePath() + "/hype/recovery";
+    if (!QFileInfo::exists(recovery) && QFileInfo(hypeRecovery).isDir() && QDir().mkpath(stateDirectory))
+        QDir().rename(hypeRecovery, recovery);
 }
 static void rememberPresentation(const QString &path) {
-    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "hype", "hype");
+    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "beamdown", "beamdown");
     settings.setValue("files/lastDirectory", QFileInfo(path).absolutePath());
     settings.setValue("files/lastPresentation", path);
 }
 bool Deck::reopenLastPresentation() {
-    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "hype", "hype");
+    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "beamdown", "beamdown");
     const QString path =
         settings.value("files/lastRecoveryDocument", settings.value("files/lastPresentation"))
             .toString();

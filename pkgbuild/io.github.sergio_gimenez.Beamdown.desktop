@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Beamdown
+Comment=PowerPoint + LaTeX Beamer, but Markdown-driven
+Exec=beamdown open %f
+Icon=io.github.sergio_gimenez.Beamdown
+Terminal=false
+Categories=Office;Presentation;

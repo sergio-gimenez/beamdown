@@ -9,7 +9,7 @@ import subprocess
 import tempfile
 import unittest
 
-APP = Path(__file__).resolve().parents[1] / 'build/hype'
+APP = Path(__file__).resolve().parents[1] / 'build/beamdown'
 DECK = '# One\n\n---\n\n# Two\n\n- a\n- b\n\n---\n\n```ruby\na = 1\n---\nb = 2\n```\n'
 
 
@@ -186,11 +186,12 @@ class CliTests(unittest.TestCase):
         self.hype(self.deck, '--pdf', 'flag.pdf')
         self.assertEqual((self.root / 'flag.pdf').read_bytes()[:5], b'%PDF-')
         self.assertIn('Name a Markdown presentation', self.hype('--pdf', 'none.pdf', code=1).stderr)
-        self.assertFalse((self.root / 'config/hype/hype.ini').exists())
+        self.assertFalse((self.root / 'config/beamdown/beamdown.ini').exists())
 
     def test_themes_and_help(self):
-        self.assertEqual(json.loads(self.hype('themes', '--json').stdout)['themes'], ['paper'])
-        self.assertIn('hype check', self.hype('help', 'format').stdout)
+        self.assertEqual(json.loads(self.hype('themes', '--json').stdout)['themes'],
+                         ['adwaita', 'adwaita-dark', 'beamer', 'metropolis', 'metropolis-dark', 'paper', 'tokyo-night'])
+        self.assertIn('beamdown check', self.hype('help', 'format').stdout)
         self.assertIn('--slide', self.hype('help', 'render').stdout)
         self.assertIn('help format', self.hype('help').stdout)
         self.assertEqual(self.hype().stdout, self.hype('help').stdout)
@@ -198,14 +199,14 @@ class CliTests(unittest.TestCase):
         self.assertIn('help format', self.hype('--help').stdout)
 
     def test_skill_prints_and_installs_for_agents(self):
-        self.assertTrue(self.hype('skill').stdout.startswith('---\nname: hype\n'))
+        self.assertTrue(self.hype('skill').stdout.startswith('---\nname: beamdown\n'))
         home = self.root / 'home'
         (home / '.claude').mkdir(parents=True)
         for _ in range(2):  # Installing again refreshes the copy and the link.
             self.assertIn('Linked', self.hype('skill', 'install').stdout)
-        self.assertEqual((home / '.agents/skills/hype/SKILL.md').read_text(), self.hype('skill').stdout)
-        self.assertEqual(os.readlink(home / '.claude/skills/hype'), '../../.agents/skills/hype')
-        self.assertTrue((home / '.claude/skills/hype/SKILL.md').is_file())
+        self.assertEqual((home / '.agents/skills/beamdown/SKILL.md').read_text(), self.hype('skill').stdout)
+        self.assertEqual(os.readlink(home / '.claude/skills/beamdown'), '../../.agents/skills/beamdown')
+        self.assertTrue((home / '.claude/skills/beamdown/SKILL.md').is_file())
 
 
 if __name__ == '__main__':

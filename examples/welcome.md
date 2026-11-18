@@ -1,7 +1,7 @@
 ---
-title: Hype
+title: Beamdown
 font: JetBrains Mono
-theme: tokyo-night
+theme: adwaita
 ---
 
 # Your next idea
@@ -15,14 +15,14 @@ Markdown in. A presentation out.
 - Write in Markdown
 - Drag slides to reorder
 - Duplicate the good ones
-- Pick an Omarchy theme
+- Pick a theme
 
 ---
 
 > A presentation is a sequence of ideas.
 > Give each one room to breathe.
 
-— Hype
+— Beamdown
 
 ---
 
