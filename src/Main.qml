@@ -184,11 +184,26 @@ ApplicationWindow {
             player.play()
         }
     }
+    // A mouse wheel glides to where its notches point, and a quick run of notches adds to the
+    // glide under way. A touchpad already moves by the pixel, so it follows the fingers directly.
+    NumberAnimation { id: editorGlide; objectName: "editorGlide"; property: "contentY"; duration: 180; easing.type: Easing.OutCubic }
     function scrollEditor(flick, event) {
         let delta = event.angleDelta.y ? event.angleDelta.y / 120 * 180 : event.pixelDelta.y
         if (!delta) { event.accepted = false; return }
         flick.cancelFlick()
-        flick.contentY = Math.max(0, Math.min(Math.max(0, flick.contentHeight - flick.height + flick.bottomMargin), flick.contentY - delta))
+        const limit = Math.max(0, flick.contentHeight - flick.height + flick.bottomMargin)
+        const clamp = y => Math.max(0, Math.min(limit, y))
+        if (event.phase === Qt.NoScrollPhase) {
+            const from = editorGlide.running && editorGlide.target === flick ? editorGlide.to : flick.contentY
+            editorGlide.stop()
+            editorGlide.target = flick
+            editorGlide.from = flick.contentY
+            editorGlide.to = clamp(from - delta)
+            editorGlide.start()
+        } else {
+            editorGlide.stop()
+            flick.contentY = clamp(flick.contentY - delta)
+        }
         event.accepted = true
     }
     function switchEditingFocus() {
@@ -215,6 +230,8 @@ ApplicationWindow {
         }
     }
     function editorKey(editor, flick, event) {
+        // Typing and paging place the text themselves, so a wheel's glide gives way.
+        editorGlide.stop()
         if (event.key === Qt.Key_Escape && finding) {
             event.accepted = true
             closeFind()
@@ -364,6 +381,7 @@ ApplicationWindow {
         revealMatch(editor, markdown ? sourceFlick : slideScroll.contentItem, match)
     }
     function revealMatch(editor, flick, match) {
+        editorGlide.stop()
         // After the new slide's own scroll to the top, which is also deferred.
         Qt.callLater(function() {
             const first = editor.positionToRectangle(match.start)
@@ -461,6 +479,7 @@ ApplicationWindow {
     function restoreSource(position, focus = true) { revealSource(false, sourceFlick.contentY, focus, 0, position) }
     function alignSource(focus = true, navigationDelta = 0) { revealSource(true, sourceFlick.contentY, focus, navigationDelta, slideTextPosition()) }
     function revealSource(atTop, previousY, focus = true, navigationDelta = 0, position = deck.sourcePosition()) {
+        editorGlide.stop()
         let start = deck.sourcePosition()
         let cursor = position
         let scrollPosition = position
@@ -526,6 +545,8 @@ ApplicationWindow {
             sourceOnlyCursor = -1
             slideEditor.cursorPosition = 0
             if (!sourceEditor.activeFocus) sourceEditor.cursorPosition = slideTextPosition()
+            // A glide on the last slide's text must not carry on into this one.
+            editorGlide.stop()
             Qt.callLater(function() { slideScroll.contentItem.contentY = 0 })
         }
         syncingEditor = false

@@ -3562,7 +3562,19 @@ static void write(const QString &path, const QString &content) {
                               QPoint(0, -120), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase,
                               false);
         QCoreApplication::sendEvent(window, &textWheel);
-        QCOMPARE(flick->property("contentY").toDouble(), initialScroll + 180);
+        // A wheel notch glides there rather than jumping, and a second one mid-glide adds to it.
+        QVERIFY(flick->property("contentY").toDouble() < initialScroll + 180);
+        QTRY_COMPARE(flick->property("contentY").toDouble(), initialScroll + 180);
+        QCoreApplication::sendEvent(window, &textWheel);
+        QTest::qWait(40);
+        QCoreApplication::sendEvent(window, &textWheel);
+        QTRY_COMPARE(flick->property("contentY").toDouble(), initialScroll + 540);
+        // A touchpad follows the fingers at once.
+        QWheelEvent fingers(sourcePoint, window->mapToGlobal(sourcePoint.toPoint()), QPoint(0, 40),
+                            QPoint(), Qt::NoButton, Qt::NoModifier, Qt::ScrollUpdate, false,
+                            Qt::MouseEventSynthesizedBySystem, &touchpad);
+        QCoreApplication::sendEvent(window, &fingers);
+        QCOMPARE(flick->property("contentY").toDouble(), initialScroll + 500);
         QCOMPARE(d.source(), beforeToggle);
 
         QTest::keyClick(window, Qt::Key_Period, Qt::ControlModifier);
