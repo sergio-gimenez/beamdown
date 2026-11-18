@@ -22,16 +22,19 @@ and `![](demo.mp4)` reads `videos/demo.mp4`.
 ```markdown
 ---
 title: "My talk"
-theme: tokyo-night
+theme: adwaita
 font: "JetBrains Mono"
 ---
 ```
 
 `hype new` writes this for you, along with the theme's `color_*` values.
-`hype themes` lists the installed themes. Any `color_*` value can be
+`hype themes` lists the themes: the bundled `adwaita` (the default),
+`adwaita-dark`, `beamer`, `metropolis`, `metropolis-dark` and `tokyo-night`,
+and any installed Omarchy theme. Any `color_*` value can be
 overridden with a `#rrggbb` color: `color_background`, `color_foreground`,
 `color_accent`, `color_green`, `color_red`, `color_yellow`, `color_magenta`,
-`color_cyan`, `color_dark_foreground`.
+`color_cyan`, `color_dark_foreground`. `color_heading` colors headings, which
+otherwise take the text color; the `beamer` theme sets it.
 
 For documents more than talks, such as a proposal or a brand book, fix the
 typography instead of letting each slide grow its text to fill the space:
@@ -233,7 +236,7 @@ images, not videos, and cannot be combined with `fit`, `span`, `position`, or
 ## Commands
 
 ```text
-hype new talk/presentation.md --title "My talk" --theme tokyo-night
+hype new talk/presentation.md --title "My talk" --theme metropolis
 hype check talk/presentation.md --json     every problem, with slide and line
 hype slides talk/presentation.md --json    an outline of the slides
 hype render talk/presentation.md --slide 3 -o slide.png

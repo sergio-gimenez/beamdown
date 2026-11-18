@@ -1,1 +1,1 @@
-<RCC><qresource prefix="/"><file>Main.qml</file><file>AppIcon.qml</file><file>Markdown.js</file><file>format.md</file><file>skill.md</file></qresource></RCC>
+<RCC><qresource prefix="/"><file>Main.qml</file><file>AppIcon.qml</file><file>Markdown.js</file><file>format.md</file><file>skill.md</file><file>themes/adwaita/colors.toml</file><file>themes/adwaita-dark/colors.toml</file><file>themes/beamer/colors.toml</file><file>themes/metropolis/colors.toml</file><file>themes/metropolis-dark/colors.toml</file><file>themes/tokyo-night/colors.toml</file></qresource></RCC>

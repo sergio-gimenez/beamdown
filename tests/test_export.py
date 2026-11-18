@@ -255,7 +255,7 @@ class ExportTests(unittest.TestCase):
         self.assert_color(self.movie_pixel(movie, 0.05, 180, 100), (255, 0, 0))  # Undarkened.
         self.assert_color(self.movie_pixel(movie, 0.25, 180, 100), (0, 0, 255))
         corner = self.movie_pixel(movie, 0.05, 150, 100)
-        self.assertLess(corner[0], 100, corner)  # Left of the image is the theme background.
+        self.assert_color(corner, (255, 255, 255))  # Left of the image is the theme background.
         self.assert_color(self.movie_pixel(movie, 0.05, 5, 5), corner)  # No darkening overlay.
 
     def test_animation_conversion_failure_preserves_export(self):

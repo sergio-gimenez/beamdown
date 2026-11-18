@@ -1585,10 +1585,10 @@ static void write(const QString &path, const QString &content) {
         QCOMPARE(d.slide(1), QString("# Two\n"));
     }
     void svgKeepsItsWeightInPdf() {
-        // A white bar two units wide in a ten-unit drawing, as a path the way glyphs are drawn:
-        // filled, never stroked.
+        // A white bar two units wide in a ten-unit drawing, on a dark slide, as a path the way
+        // glyphs are drawn: filled, never stroked.
         Deck d;
-        d.editSource("```svg\n<svg viewBox=\"0 0 10 10\"><path d=\"M4 0H6V10H4Z\" fill=\"#ffffff\"/></svg>\n```\n");
+        d.editSource("---\ntheme: tokyo-night\n---\n\n```svg\n<svg viewBox=\"0 0 10 10\"><path d=\"M4 0H6V10H4Z\" fill=\"#ffffff\"/></svg>\n```\n");
         QTemporaryDir tmp;
         QVERIFY(d.exportPdf(tmp.filePath("bar.pdf")));
         QPdfDocument pdf;
@@ -2084,7 +2084,7 @@ static void write(const QString &path, const QString &content) {
         const QImage page = pdf.render(0, QSize(1920, 1080));
         const QColor corner = page.pixelColor(1850, 1010), outside = page.pixelColor(1850, 900);
         QVERIFY2(corner.red() > 200 && corner.green() < 60, qPrintable(corner.name()));
-        QVERIFY2(outside.red() < 100, qPrintable(outside.name()));
+        QVERIFY2(nearColor(outside, background), qPrintable(outside.name()));
         // A missing placed image keeps its placeholder inside the small box.
         slide.fill(Qt::transparent);
         p.begin(&slide);
@@ -4257,6 +4257,43 @@ static void write(const QString &path, const QString &content) {
         QCOMPARE(reopened.fontName(), family);
         d.undo();
         QCOMPARE(d.source(), original);
+    }
+    void bundledThemes() {
+        Deck d;
+        for (const char *name : {"adwaita", "adwaita-dark", "beamer", "metropolis", "metropolis-dark", "tokyo-night"})
+            QVERIFY2(d.themeNames().contains(name), name);
+        // New presentations start light.
+        QVERIFY(d.source().contains("theme: adwaita\n"));
+        QCOMPARE(d.background(), QColor("#ffffff"));
+        // Beamer colors its frame titles; other themes leave headings in the text color.
+        d.chooseTheme("beamer");
+        QVERIFY(d.source().contains("color_heading:"));
+        QCOMPARE(d.palette().value("heading").toString(), QString("#3333b3"));
+        d.chooseTheme("metropolis");
+        QVERIFY(!d.source().contains("color_heading"));
+        QVERIFY(!d.palette().contains("heading"));
+        QCOMPARE(d.background(), QColor("#fafafa"));
+        // Headings take the heading color, and bold text still takes the accent.
+        QVariantMap palette{{"background", "#000000"}, {"foreground", "#00ff00"}, {"accent", "#0000ff"},
+                            {"heading", "#ff0000"}, {"font", "JetBrains Mono"}};
+        auto colors = [&](const QString &slide) {
+            QImage image(960, 540, QImage::Format_ARGB32_Premultiplied);
+            QPainter painter(&image);
+            paintSlide(&painter, image.rect(), slide, "/tmp", palette);
+            painter.end();
+            QSet<QRgb> seen;
+            for (int y = 0; y < image.height(); ++y)
+                for (int x = 0; x < image.width(); ++x)
+                    seen.insert(image.pixel(x, y) & 0xffffff);
+            return seen;
+        };
+        auto heading = colors("# HHHH");
+        QVERIFY(heading.contains(0xff0000));
+        QVERIFY(!heading.contains(0x00ff00));
+        auto body = colors("# HHHH\n\nplain **bold**");
+        QVERIFY(body.contains(0xff0000) && body.contains(0x00ff00) && body.contains(0x0000ff));
+        palette.remove("heading");
+        QVERIFY(!colors("# HHHH").contains(0xff0000));
     }
     void themeSnapshot() {
         Deck d;
