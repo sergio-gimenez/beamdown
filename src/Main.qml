@@ -1766,6 +1766,11 @@ ApplicationWindow {
                     property real slideWidth: Math.min(width-margin*2,(height-margin*2)*16/9)
                     Item {
                         id: slideFrame; objectName: "slideFrame"; width: stage.slideWidth; height: width*9/16; anchors.centerIn: parent
+                        // A hairline keeps a white slide apart from GNOME's white editing area.
+                        Rectangle {
+                            visible: appTheme.adwaita && !win.presenting; z: -1
+                            anchors.fill: parent; anchors.margins: -1; color: "transparent"; border.color: win.ui.border
+                        }
                         // Keep the fast thumbnail behind the full render. Even if it remains visible
                         // briefly after loading, it cannot cover the sharp image once that is ready.
                         Image {
