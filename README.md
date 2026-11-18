@@ -19,7 +19,7 @@ What Beamdown adds over Hype:
 - **A GNOME look.** Adwaita colors and rounded corners that follow your dark style and accent color as you change them. On Omarchy it still follows the Omarchy theme.
 - **Slide themes built in.** `adwaita` (the default), `adwaita-dark`, `beamer`, `metropolis`, `metropolis-dark` and `tokyo-night`, with no Omarchy needed. Installed Omarchy themes still appear in the list.
 - **Beamer's toolbox.** Build steps with `. . .` and incremental lists, a PDF page per step, LaTeX math, Mermaid diagrams, hidden backup slides, fixed typography with a running header and slide numbers, and split layouts that put an image beside the text.
-- **Editing comforts.** Find with **Ctrl+F** in the slide and **Ctrl+Shift+F** in every slide, an editor you can make taller or shorter, and SVG labels you can retype on the slide.
+- **Editing comforts.** Markdown colored as you type, find with **Ctrl+F** in the slide and **Ctrl+Shift+F** in every slide, an editor you can make taller or shorter, and SVG labels you can retype on the slide.
 
 Hype's history and MIT license come with the fork; see [LICENSE](LICENSE).
 
@@ -189,7 +189,7 @@ Each slide supports one image or video. Copy the whole presentation folder when 
 
 The palette and font icons in the toolbar choose a slide theme and a presentation font. Hover to see the current choices. Beamdown ships `adwaita`, `adwaita-dark`, `beamer` (with its blue frame titles), `metropolis`, `metropolis-dark` and `tokyo-night`, and lists any installed Omarchy theme beside them. Theme colors apply to text, code, and slide backgrounds; your images keep their original colors. Code stays monospaced. `color_heading: "#3333b3"` in the front matter colors headings on their own, as beamer colors its frame titles.
 
-Beamdown's own interface follows the desktop independently of the slides: GNOME's dark style and accent color, or the current Omarchy theme, and it updates when you change them.
+Beamdown's own interface follows the desktop independently of the slides: GNOME's dark style and accent color, or the current Omarchy theme, and it updates when you change them. Both editors color the Markdown as you type: headings, emphasis, code, media and links, comments and `hype` directives, front matter, math, and the lines that break, pause and fence slides.
 
 The header shows the presentation's name with your position in it, such as “Slide 4 of 45”; saving and exporting report their progress on that line. The file icon beside it holds New, Open, Save, Export, and Version history, and is highlighted when you have unsaved changes.
 

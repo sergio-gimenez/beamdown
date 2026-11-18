@@ -2,9 +2,13 @@
 #include <QColor>
 #include <QDBusVariant>
 #include <QFileSystemWatcher>
+#include <QPointer>
+#include <QQuickTextDocument>
 #include <QObject>
 #include <QTimer>
 #include <QVariantMap>
+
+class MarkdownHighlighter;
 
 class AppTheme : public QObject {
     Q_OBJECT
@@ -23,6 +27,8 @@ class AppTheme : public QObject {
     bool adwaita() const { return m_adwaita; }
     // GNOME's palette for a color scheme and accent; public for tests.
     static QVariantMap adwaitaColors(bool dark, const QColor &accent);
+    // Colors an editor's Markdown, in this theme's syntax colors as they change.
+    Q_INVOKABLE void highlight(QQuickTextDocument *document);
   signals:
     void changed();
 
@@ -36,6 +42,8 @@ class AppTheme : public QObject {
     bool m_dark = false;
     bool m_adwaita = false;
     QColor m_accent{"#3584e4"};
+    QVariantMap syntaxColors() const;
+    QList<QPointer<MarkdownHighlighter>> m_highlighters;
     QString m_currentDirectory;
     QVariantMap m_colors;
     int m_rounding = 0;

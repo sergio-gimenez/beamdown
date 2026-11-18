@@ -1,4 +1,5 @@
 #include "apptheme.h"
+#include "markdownhighlighter.h"
 #include <QColor>
 #include <QDBusArgument>
 #include <QDBusConnection>
@@ -109,7 +110,29 @@ QVariantMap AppTheme::adwaitaColors(bool dark, const QColor &accent) {
             {"accentText", white},
             {"accentHover", mix(accent, white, .12)},
             {"windowBorder", accent},
-            {"error", dark ? QColor("#ff7b63") : QColor("#c01c28")}};
+            {"error", dark ? QColor("#ff7b63") : QColor("#c01c28")},
+            // GNOME's palette, a shade lighter on dark and darker on light, as its text editor does.
+            {"syntaxHeading", dark ? mix(accent, white, .45) : mix(accent, QColor("#000006"), .25)},
+            {"syntaxMarker", mix(window, fg, .5)},
+            {"syntaxCode", dark ? QColor("#8ff0a4") : QColor("#1c7a48")},
+            {"syntaxLink", dark ? QColor("#dc8add") : QColor("#813d9c")},
+            {"syntaxKey", dark ? QColor("#ffbe6f") : QColor("#c64600")},
+            {"syntaxMath", dark ? QColor("#f9f06b") : QColor("#9c6e03")},
+            {"syntaxComment", mix(window, fg, .5)}};
+}
+QVariantMap AppTheme::syntaxColors() const {
+    QVariantMap colors;
+    for (const QString role : {"heading", "marker", "code", "link", "key", "math", "comment"})
+        colors[role] = m_colors.value("syntax" + role.left(1).toUpper() + role.mid(1));
+    return colors;
+}
+void AppTheme::highlight(QQuickTextDocument *document) {
+    if (!document || !document->textDocument())
+        return;
+    // The document owns its highlighter, so it goes with the editor.
+    auto *highlighter = new MarkdownHighlighter(document->textDocument());
+    highlighter->setColors(syntaxColors());
+    m_highlighters.append(highlighter);
 }
 void AppTheme::reload() {
     const QString theme = m_currentDirectory + "/theme", path = theme + "/colors.toml";
@@ -119,7 +142,7 @@ void AppTheme::reload() {
     if (omarchy) {
         // Quoted or bare hex with an optional note. Quotes must pair; comments need no gap.
         const QRegularExpression entry(
-            R"re(^\s*([a-z_]+)\s*=\s*(["']?)(#[0-9a-fA-F]{6})\2\s*(?:#.*)?\s*$)re");
+            R"re(^\s*([a-z_][a-z0-9_]*)\s*=\s*(["']?)(#[0-9a-fA-F]{6})\2\s*(?:#.*)?\s*$)re");
         while (!file.atEnd()) {
             const auto match = entry.match(QString::fromUtf8(file.readLine()));
             if (match.hasMatch())
@@ -149,6 +172,13 @@ void AppTheme::reload() {
                              {"windowBorder", values.value("active_border_color", accent)},
                              {"error", values.value("red", QColor("#d94b4b"))}};
     colors["headerbar"] = colors["sidebar"] = colors["popover"] = colors["panel"];
+    // Omarchy's terminal colors: 2 green, 3 yellow, 5 magenta, 6 cyan.
+    colors["syntaxHeading"] = accent;
+    colors["syntaxMarker"] = colors["syntaxComment"] = mix(bg, fg, .5);
+    colors["syntaxCode"] = values.value("color2", mix(fg, QColor("#3a944a"), .6));
+    colors["syntaxKey"] = values.value("color3", mix(fg, QColor("#c88800"), .6));
+    colors["syntaxLink"] = values.value("color5", mix(fg, QColor("#9141ac"), .6));
+    colors["syntaxMath"] = values.value("color6", mix(fg, QColor("#2190a4"), .6));
     // Popups take the desktop's window corners: square unless the theme rounds them.
     int rounding = 0;
     QStringList windowFiles;
@@ -172,6 +202,9 @@ void AppTheme::reload() {
         m_colors = colors;
         m_rounding = rounding;
         m_adwaita = !omarchy;
+        for (const auto &highlighter : m_highlighters)
+            if (highlighter)
+                highlighter->setColors(syntaxColors());
         emit changed();
     }
     // Theme switching replaces symlinks; atomic saves replace file inodes.

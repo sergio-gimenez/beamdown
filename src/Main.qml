@@ -1917,6 +1917,7 @@ ApplicationWindow {
                                 id: slideEditor; objectName: "slideEditor"; persistentSelection: true; textFormat: TextEdit.PlainText; color: win.ui.foreground; selectionColor: win.ui.selection; selectedTextColor: win.ui.selectionText; font.family: "JetBrains Mono"; font.pixelSize: 16
                                 onActiveFocusChanged: if (activeFocus) win.focusedEditor = "slide"
                                 wrapMode: TextEdit.Wrap; leftPadding: 24; topPadding: 16; placeholderText: "# Your headline"
+                                Component.onCompleted: appTheme.highlight(textDocument)
                                 onTextChanged: {
                                     if (!win.syncingEditor && activeFocus) {
                                         const previousCount = deck.count
@@ -1966,6 +1967,7 @@ ApplicationWindow {
                             color: win.ui.foreground; selectionColor: win.ui.selection; selectedTextColor: win.ui.selectionText
                             font.family: "JetBrains Mono"; font.pixelSize: 18
                             wrapMode: TextEdit.NoWrap; leftPadding: 32; topPadding: 30; bottomPadding: 30
+                            Component.onCompleted: appTheme.highlight(textDocument)
                             onTextChanged: { if (!win.syncingEditor && activeFocus && text !== deck.source) deck.editSource(text) }
                             onCursorPositionChanged: { if (!win.syncingEditor && activeFocus) deck.selectAt(cursorPosition) }
                             Keys.onPressed: function(event) { win.editorKey(sourceEditor, sourceFlick, event) }

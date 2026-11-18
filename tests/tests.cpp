@@ -1,5 +1,6 @@
 #include "budget.h"
 #include "apptheme.h"
+#include "markdownhighlighter.h"
 #include "deck.h"
 #include "filedialog.h"
 #include "renderer.h"
@@ -26,6 +27,8 @@
 #include <QMediaPlayer>
 #include <QPainter>
 #include <QTextTable>
+#include <QTextBlock>
+#include <QTextLayout>
 #include <QPdfDocument>
 #include <QProcess>
 #include <QQmlApplicationEngine>
@@ -4278,6 +4281,61 @@ static void write(const QString &path, const QString &content) {
         Deck::adoptHypeData(home.filePath("state/beamdown"));
         QCOMPARE(Deck().editorHeight(), 400.0);
         QVERIFY(!QFile::exists(home.filePath("state/beamdown/recovery/newer")));
+    }
+    void highlightsMarkdownAsSlidesReadIt() {
+        const QString source = "---\ntitle: Talk\n---\n\n# Head **bold**\n\n"
+                               "- item *it* `co*de*` $x^2$\n![fit](a.png) [t](http://u)\n"
+                               "<!-- hype: section=\"A\"\nstill comment -->\n```python\nx = 1\n```\n"
+                               ". . .\nprice $5 and $6\n";
+        QTextDocument document;
+        document.setPlainText(source);
+        MarkdownHighlighter highlighter(&document);
+        QVariantMap colors{{"heading", QColor("#000001")}, {"marker", QColor("#000002")},
+                           {"code", QColor("#000003")},    {"link", QColor("#000004")},
+                           {"key", QColor("#000005")},     {"math", QColor("#000006")},
+                           {"comment", QColor("#000007")}};
+        highlighter.setColors(colors);
+        auto at = [&](int line, const QString &needle) {
+            const QTextBlock block = document.findBlockByNumber(line);
+            const int position = block.text().indexOf(needle);
+            QTextCharFormat format;
+            for (const auto &range : block.layout()->formats())
+                if (position >= range.start && position < range.start + range.length)
+                    format = range.format;
+            return format;
+        };
+        auto color = [&](int line, const QString &needle) {
+            const auto format = at(line, needle);
+            return format.hasProperty(QTextFormat::ForegroundBrush) ? format.foreground().color().name() : QString();
+        };
+        QCOMPARE(color(1, "title"), "#000005");
+        QCOMPARE(color(4, "#"), "#000002");
+        QCOMPARE(color(4, "Head"), "#000001");
+        QCOMPARE(at(4, "Head").fontWeight(), int(QFont::Bold));
+        // Bold inside a heading keeps the heading's color.
+        QCOMPARE(color(4, "bold"), "#000001");
+        QCOMPARE(color(4, "**"), "#000002");
+        QCOMPARE(color(6, "-"), "#000001");
+        QVERIFY(at(6, "it*").fontItalic());
+        // Code wins over what looks like emphasis inside it.
+        QCOMPARE(color(6, "co*de"), "#000003");
+        QVERIFY(!at(6, "de*").fontItalic());
+        QCOMPARE(color(6, "x^2"), "#000006");
+        QCOMPARE(color(7, "fit"), "#000005");
+        QCOMPARE(color(7, "a.png"), "#000004");
+        QCOMPARE(color(7, "http"), "#000004");
+        QCOMPARE(color(8, "hype:"), "#000005");
+        QCOMPARE(color(8, "section"), "#000007");
+        QCOMPARE(color(9, "still"), "#000007");
+        QCOMPARE(color(10, "python"), "#000005");
+        QCOMPARE(color(11, "x = 1"), "#000003");
+        QCOMPARE(color(13, ". . ."), "#000002");
+        QCOMPARE(color(14, "$5"), QString());
+        // Highlighting never touches the text, and follows new colors.
+        QCOMPARE(document.toPlainText(), source);
+        colors["heading"] = QColor("#000009");
+        highlighter.setColors(colors);
+        QCOMPARE(color(4, "Head"), "#000009");
     }
     void bundledThemes() {
         Deck d;
