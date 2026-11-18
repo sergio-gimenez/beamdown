@@ -261,6 +261,11 @@ static void write(const QString &path, const QString &content) {
         QCOMPARE(light.colors().value("panel").value<QColor>(), QColor("#fafafb"));
         QCOMPARE(light.colors().value("background").value<QColor>(), QColor("#ffffff"));
         QCOMPARE(light.colors().value("sidebar").value<QColor>(), QColor("#ebebed"));
+        // The text box stands apart from the stage around it: lighter on dark, white on light.
+        auto lightness = [](const AppTheme &theme, const char *key) { return theme.colors().value(key).value<QColor>().lightnessF(); };
+        QVERIFY(lightness(dark, "editor") > lightness(dark, "stage") + 0.05);
+        QCOMPARE(light.colors().value("editor").value<QColor>(), QColor("#ffffff"));
+        QVERIFY(lightness(light, "stage") < lightness(light, "editor") - 0.03);
         // Both styles name the same colors as an Omarchy theme, and a few more.
         QCOMPARE(AppTheme::adwaitaColors(true, Qt::red).keys(), AppTheme::adwaitaColors(false, Qt::red).keys());
         // An Omarchy theme brings back the Omarchy look.
@@ -269,6 +274,8 @@ static void write(const QString &path, const QString &content) {
         QTRY_VERIFY(!light.adwaita());
         QCOMPARE(light.colors().value("headerbar"), light.colors().value("panel"));
         QCOMPARE(light.colors().value("popover"), light.colors().value("panel"));
+        QCOMPARE(light.colors().value("editor"), light.colors().value("background"));
+        QCOMPARE(light.colors().value("stage"), light.colors().value("background"));
         QCOMPARE(light.controlRounding(), 0);
         for (const auto &key : AppTheme::adwaitaColors(true, Qt::red).keys())
             QVERIFY2(light.colors().contains(key), qPrintable(key));

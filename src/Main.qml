@@ -1053,7 +1053,7 @@ ApplicationWindow {
         readonly property bool menuOpen: mediaMenu.visible
         Layout.preferredHeight: 48
         background: Rectangle {
-            color: win.ui.background
+            color: win.ui.stage
             Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: win.ui.border; opacity: 0.55 }
         }
         // The buttons sit inside the grip, so they keep their clicks and their arrow cursor. A
@@ -1141,7 +1141,7 @@ ApplicationWindow {
         function focusField() { findField.forceActiveFocus(); findField.selectAll() }
         visible: win.finding && shown
         Layout.fillWidth: true; Layout.preferredHeight: 44
-        color: win.ui.background
+        color: win.ui.stage
         Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: win.ui.border; opacity: 0.55 }
         RowLayout {
             anchors.fill: parent; anchors.leftMargin: findBar.textInset - 10; anchors.rightMargin: 14; spacing: 6
@@ -1153,7 +1153,7 @@ ApplicationWindow {
                 selectionColor: win.ui.selection; selectedTextColor: win.ui.selectionText
                 leftPadding: 10; rightPadding: 10; topPadding: 0; bottomPadding: 0
                 placeholderText: win.markdown ? "Find in presentation" : win.findAll ? "Find in all slides" : "Find in this slide"
-                background: Rectangle { color: win.ui.background; radius: win.softRadius; border.color: findField.activeFocus ? win.ui.accent : win.ui.border }
+                background: Rectangle { color: win.ui.editor; radius: win.softRadius; border.color: findField.activeFocus ? win.ui.accent : win.ui.border }
                 text: win.findQuery
                 onTextEdited: { win.findQuery = text; win.refreshFind(true) }
                 // Window shortcuts would move, select or duplicate slides; here these keys belong to the search.
@@ -1739,7 +1739,7 @@ ApplicationWindow {
         // The color sits behind the split rather than as its background: with a background,
         // SplitView finds that instead of the handle under the pointer, and the handle won't drag.
         Rectangle {
-            color: win.ui.background
+            color: win.presenting ? win.ui.background : win.ui.stage
             visible: (!win.markdown && !win.overview) || win.presenting
             Layout.fillWidth: true; Layout.fillHeight: true
             Layout.margins: win.presenting ? 0 : win.inset; Layout.leftMargin: 0
@@ -1902,7 +1902,7 @@ ApplicationWindow {
                     Rectangle {
                         objectName: "slideEditorFrame"
                         Layout.fillWidth: true; Layout.fillHeight: true
-                        color: win.ui.background; radius: win.softRadius
+                        color: win.ui.editor; radius: win.softRadius
                         readonly property color focusStroke: win.focusedEditor === "slide" && !win.popupOpen ? win.ui.inactiveSelection : win.ui.border
                         border.color: focusStroke; border.width: 1
                         ScrollView {
@@ -1944,13 +1944,13 @@ ApplicationWindow {
             Rectangle {
                 objectName: "sourceEditorFrame"
                 Layout.fillWidth: true; Layout.fillHeight: true
-                color: win.ui.background; radius: win.softRadius
+                color: win.ui.editor; radius: win.softRadius
                 readonly property color focusStroke: win.focusedEditor === "source" && !win.popupOpen ? win.ui.inactiveSelection : win.ui.border
                 border.color: focusStroke; border.width: 1
                 ScrollView {
                     id: sourceScroll; objectName: "sourceScroll"
                     anchors.fill: parent; anchors.margins: 1; clip: true
-                    background: Rectangle { color: win.ui.background }
+                    background: Rectangle { color: win.ui.editor }
                     Flickable {
                         id: sourceFlick; objectName: "sourceFlick"
                         clip: true; boundsBehavior: Flickable.StopAtBounds

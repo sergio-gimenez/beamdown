@@ -98,6 +98,10 @@ QVariantMap AppTheme::adwaitaColors(bool dark, const QColor &accent) {
             {"headerbar", dark ? QColor("#2e2e32") : white},
             {"sidebar", dark ? QColor("#2e2e32") : QColor("#ebebed")},
             {"popover", dark ? QColor("#36363a") : white},
+            // The text box stands out from the stage around it: raised like a card on dark,
+            // white on a light grey stage on light.
+            {"stage", dark ? view : mix(window, fg, .04)},
+            {"editor", dark ? mix(window, white, .08) : white},
             {"button", mix(window, fg, .1)},
             {"hover", mix(window, fg, .08)},
             {"border", border},
@@ -172,6 +176,7 @@ void AppTheme::reload() {
                              {"windowBorder", values.value("active_border_color", accent)},
                              {"error", values.value("red", QColor("#d94b4b"))}};
     colors["headerbar"] = colors["sidebar"] = colors["popover"] = colors["panel"];
+    colors["stage"] = colors["editor"] = bg;
     // Omarchy's terminal colors: 2 green, 3 yellow, 5 magenta, 6 cyan.
     colors["syntaxHeading"] = accent;
     colors["syntaxMarker"] = colors["syntaxComment"] = mix(bg, fg, .5);
