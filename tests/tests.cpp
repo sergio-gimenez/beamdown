@@ -39,6 +39,7 @@
 #include <QScreen>
 #include <QSaveFile>
 #include <QScopeGuard>
+#include <QThread>
 #include <QSemaphore>
 #include <QThreadPool>
 #include <QTimer>
@@ -81,6 +82,33 @@ class TestFilePortal : public QDBusVirtualObject {
             reply();
             QTimer::singleShot(10, this, response);
         }
+        return true;
+    }
+};
+
+// GNOME's dark style and accent color, as the settings portal reports them.
+class TestSettingsPortal : public QDBusVirtualObject {
+  public:
+    uint scheme = 1;
+    QColor accent{"#e62d42"};
+    QString introspect(const QString &) const override { return {}; }
+    static QDBusVariant rgb(const QColor &color) {
+        QDBusArgument value;
+        value.beginStructure();
+        value << double(color.redF()) << double(color.greenF()) << double(color.blueF());
+        value.endStructure();
+        return QDBusVariant(QVariant::fromValue(value));
+    }
+    bool handleMessage(const QDBusMessage &message, const QDBusConnection &bus) override {
+        if (message.interface() != "org.freedesktop.portal.Settings" || message.member() != "ReadOne")
+            return false;
+        const QString key = message.arguments().value(1).toString();
+        if (key == "color-scheme")
+            bus.send(message.createReply(QVariant::fromValue(QDBusVariant(scheme))));
+        else if (key == "accent-color")
+            bus.send(message.createReply(QVariant::fromValue(rgb(accent))));
+        else
+            bus.send(message.createErrorReply("org.freedesktop.portal.Error.NotFound", key));
         return true;
     }
 };
@@ -211,6 +239,73 @@ static void write(const QString &path, const QString &content) {
             QVERIFY2(theme.colors().value("accent").value<QColor>() != QColor("#224488"),
                      qPrintable(value));
         }
+    }
+    void looksLikeGnomeWithoutOmarchy() {
+        QTemporaryDir none;
+        qputenv("HYPE_COLOR_SCHEME", "dark");
+        const auto restore = qScopeGuard([] { qunsetenv("HYPE_COLOR_SCHEME"); });
+        AppTheme dark(none.path());
+        QVERIFY(dark.adwaita());
+        QCOMPARE(dark.rounding(), 12);
+        QCOMPARE(dark.controlRounding(), 6);
+        QCOMPARE(dark.colors().value("panel").value<QColor>(), QColor("#222226"));
+        QCOMPARE(dark.colors().value("headerbar").value<QColor>(), QColor("#2e2e32"));
+        QCOMPARE(dark.colors().value("popover").value<QColor>(), QColor("#36363a"));
+        QCOMPARE(dark.colors().value("accent").value<QColor>(), QColor("#3584e4"));
+        QCOMPARE(dark.colors().value("accentText").value<QColor>(), QColor("#ffffff"));
+        qputenv("HYPE_COLOR_SCHEME", "light");
+        AppTheme light(none.path());
+        QCOMPARE(light.colors().value("panel").value<QColor>(), QColor("#fafafb"));
+        QCOMPARE(light.colors().value("background").value<QColor>(), QColor("#ffffff"));
+        QCOMPARE(light.colors().value("sidebar").value<QColor>(), QColor("#ebebed"));
+        // Both styles name the same colors as an Omarchy theme, and a few more.
+        QCOMPARE(AppTheme::adwaitaColors(true, Qt::red).keys(), AppTheme::adwaitaColors(false, Qt::red).keys());
+        // An Omarchy theme turns it back into Hype's own look.
+        QVERIFY(QDir().mkpath(none.filePath("theme")));
+        write(none.filePath("theme/colors.toml"), "background = '#101020'\n");
+        QTRY_VERIFY(!light.adwaita());
+        QCOMPARE(light.colors().value("headerbar"), light.colors().value("panel"));
+        QCOMPARE(light.colors().value("popover"), light.colors().value("panel"));
+        QCOMPARE(light.controlRounding(), 0);
+        for (const auto &key : AppTheme::adwaitaColors(true, Qt::red).keys())
+            QVERIFY2(light.colors().contains(key), qPrintable(key));
+    }
+    void followsGnomeStyleChanges() {
+        if (!qEnvironmentVariableIsSet("HYPE_PORTAL_TESTS"))
+            QSKIP("Run with HYPE_PORTAL_TESTS=1 under dbus-run-session");
+        auto bus = QDBusConnection::connectToBus(QDBusConnection::SessionBus, "test-settings-portal");
+        QVERIFY(bus.registerService("org.freedesktop.portal.Desktop"));
+        // AppTheme reads the portal with a blocking call, so the portal answers from its own thread.
+        QThread thread;
+        TestSettingsPortal portal;
+        portal.moveToThread(&thread);
+        thread.start();
+        QVERIFY(bus.registerVirtualObject("/org/freedesktop/portal/desktop", &portal));
+        const auto cleanup = qScopeGuard([&] {
+            bus.unregisterObject("/org/freedesktop/portal/desktop");
+            bus.unregisterService("org.freedesktop.portal.Desktop");
+            thread.quit();
+            thread.wait();
+        });
+        QTemporaryDir none;
+        AppTheme theme(none.path());
+        QCOMPARE(theme.colors().value("panel").value<QColor>(), QColor("#222226"));
+        QCOMPARE(theme.colors().value("accent").value<QColor>(), QColor("#e62d42"));
+        auto change = [&](const QString &key, const QDBusVariant &value) {
+            auto signal = QDBusMessage::createSignal("/org/freedesktop/portal/desktop",
+                                                     "org.freedesktop.portal.Settings", "SettingChanged");
+            signal.setArguments({"org.freedesktop.appearance", key, QVariant::fromValue(value)});
+            QVERIFY(bus.send(signal));
+        };
+        change("color-scheme", QDBusVariant(uint(2)));
+        QTRY_COMPARE(theme.colors().value("panel").value<QColor>(), QColor("#fafafb"));
+        change("accent-color", TestSettingsPortal::rgb(QColor("#3a944a")));
+        QTRY_COMPARE(theme.colors().value("accent").value<QColor>(), QColor("#3a944a"));
+        // No preference is GNOME's default style, which is light.
+        change("color-scheme", QDBusVariant(uint(1)));
+        QTRY_COMPARE(theme.colors().value("panel").value<QColor>(), QColor("#222226"));
+        change("color-scheme", QDBusVariant(uint(0)));
+        QTRY_COMPARE(theme.colors().value("panel").value<QColor>(), QColor("#fafafb"));
     }
     void followsDesktopTheme() {
         QTemporaryDir files;
