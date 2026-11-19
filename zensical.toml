@@ -1,6 +1,6 @@
 [project]
 site_name = "Beamdown"
-site_description = "PowerPoint + LaTeX Beamer, but Markdown-driven. A presentation app for GNOME."
+site_description = "PowerPoint + LaTeX Beamer, but Markdown-driven, for the agentic era. A presentation app for GNOME."
 site_url = "https://beamdown.sergiogimenez.com/"
 repo_url = "https://github.com/sergio-gimenez/beamdown"
 repo_name = "sergio-gimenez/beamdown"

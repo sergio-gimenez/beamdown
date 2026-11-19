@@ -1,6 +1,6 @@
 ---
 title: Beamdown
-description: PowerPoint + LaTeX Beamer, but Markdown-driven. A presentation app for GNOME.
+description: PowerPoint + LaTeX Beamer, but Markdown-driven, for the agentic era. A presentation app for GNOME.
 hide:
   - navigation
   - toc
@@ -12,7 +12,7 @@ hide:
 
 # Beamdown { .bd-hero__title }
 
-<p class="bd-hero__tagline">PowerPoint + LaTeX Beamer, <span>but Markdown-driven.</span></p>
+<p class="bd-hero__tagline">PowerPoint + LaTeX Beamer, <span>but Markdown-driven,</span><br>for the agentic era.</p>
 
 <p class="bd-hero__lede">A presentation app for GNOME. Your agent drafts the deck in Markdown, following your brand guidelines. You finish it in a visual editor, and export to PDF or PowerPoint.</p>
 

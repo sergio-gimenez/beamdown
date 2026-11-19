@@ -4,7 +4,7 @@
 
 # Beamdown
 
-**PowerPoint + LaTeX Beamer, but Markdown-driven.**
+**PowerPoint + LaTeX Beamer, but Markdown-driven, for the agentic era.**
 
 A presentation app for GNOME. Your agent drafts the deck in Markdown, following your<br>
 brand guidelines. You finish it in a visual editor, and export to PDF or PowerPoint.

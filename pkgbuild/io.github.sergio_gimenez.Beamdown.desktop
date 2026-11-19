@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=Beamdown
-Comment=PowerPoint + LaTeX Beamer, but Markdown-driven
+Comment=PowerPoint + LaTeX Beamer, but Markdown-driven, for the agentic era
 Exec=beamdown open %f
 Icon=io.github.sergio_gimenez.Beamdown
 Terminal=false
