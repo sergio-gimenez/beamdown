@@ -59,7 +59,7 @@ int main(int argc, char **argv) {
     if (command)
         return runCli(app.arguments());
     QCommandLineParser args;
-    args.setApplicationDescription("PowerPoint + LaTeX Beamer, but Markdown-driven.\n\n" + cliSummary());
+    args.setApplicationDescription("PowerPoint + LaTeX Beamer, but Markdown-driven, for the agentic era.\n\n" + cliSummary());
     args.addHelpOption();
     args.addVersionOption();
     args.addPositionalArgument("presentation", "Markdown presentation");

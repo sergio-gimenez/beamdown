@@ -1,6 +1,6 @@
 ---
 title: Beamdown
-description: PowerPoint + LaTeX Beamer, but Markdown-driven. A presentation app for GNOME.
+description: PowerPoint + LaTeX Beamer, but Markdown-driven, for the agentic era. A presentation app for GNOME.
 hide:
   - navigation
   - toc
@@ -12,7 +12,7 @@ hide:
 
 # Beamdown { .bd-hero__title }
 
-<p class="bd-hero__tagline">PowerPoint + LaTeX Beamer, <span>but Markdown-driven.</span></p>
+<p class="bd-hero__tagline">PowerPoint + LaTeX Beamer, <span>but Markdown-driven,</span><br>for the agentic era.</p>
 
 <p class="bd-hero__lede">A presentation app for GNOME. Your agent drafts the deck in Markdown, following your brand guidelines. You finish it in a visual editor, and export to PDF or PowerPoint.</p>
 
@@ -129,3 +129,7 @@ hide:
     ![The first slide, rendered with the metropolis theme](assets/example.png)
 
 [Take the tour](write.md){ .md-button } [Why Beamdown?](why.md){ .md-button }
+
+## Where it comes from
+
+Beamdown is inspired by [Hype](https://github.com/omacom/hype), the Markdown presentation app that David Heinemeier Hansson (DHH) showed in his 2026 Rails keynote. It started as a fork of Hype and has since diverged too much to follow it, so it is now its own app. It still reads and writes Hype's file format. [Read the story](why.md).

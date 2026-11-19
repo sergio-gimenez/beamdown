@@ -10,7 +10,8 @@ header: "Beamdown · A tour"
 # Beamdown
 
 PowerPoint + LaTeX Beamer,
-but Markdown-driven.
+but Markdown-driven,
+for the agentic era.
 
 ---
 

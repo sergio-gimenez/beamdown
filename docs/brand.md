@@ -6,9 +6,9 @@ Beamdown should look like what it is: a calm GNOME app that turns plain text int
 
 **Beamdown** is one word with a capital B. Not BeamDown, Beam Down or beamdown in prose; `beamdown` is only the command.
 
-The tagline is **PowerPoint + LaTeX Beamer, but Markdown-driven.** Use it whole, with the plus sign. When there is room for one more line, add: *A presentation app for GNOME.*
+The tagline is **PowerPoint + LaTeX Beamer, but Markdown-driven, for the agentic era.** Use it whole, with the plus sign and both commas. Where it has to break, break before *for the agentic era*. When there is room for one more line, add: *A presentation app for GNOME.*
 
-When a fuller credit is needed, say Beamdown is *a fork of Hype by David Heinemeier Hansson*, and link to [Hype](https://github.com/omacom/hype).
+Be open about where Beamdown comes from. When a fuller credit is needed, say it is *inspired by Hype, which David Heinemeier Hansson (DHH) showed in his 2026 Rails keynote*, that it *started as a fork of Hype*, and that it has since diverged too much to follow it. Link to [Hype](https://github.com/omacom/hype).
 
 ## Logo
 
