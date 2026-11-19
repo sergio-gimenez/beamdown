@@ -129,3 +129,7 @@ hide:
     ![The first slide, rendered with the metropolis theme](assets/example.png)
 
 [Take the tour](write.md){ .md-button } [Why Beamdown?](why.md){ .md-button }
+
+## Where it comes from
+
+Beamdown is inspired by [Hype](https://github.com/omacom/hype), the Markdown presentation app that David Heinemeier Hansson (DHH) showed in his 2026 Rails keynote. It started as a fork of Hype and has since diverged too much to follow it, so it is now its own app. It still reads and writes Hype's file format. [Read the story](why.md).

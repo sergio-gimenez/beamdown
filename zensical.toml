@@ -5,7 +5,7 @@ site_url = "https://beamdown.sergiogimenez.com/"
 repo_url = "https://github.com/sergio-gimenez/beamdown"
 repo_name = "sergio-gimenez/beamdown"
 edit_uri = "edit/fork/docs/"
-copyright = "Beamdown is MIT licensed, a fork of <a href=\"https://github.com/omacom/hype\">Hype</a> by David Heinemeier Hansson"
+copyright = "Beamdown is MIT licensed. It started as a fork of <a href=\"https://github.com/omacom/hype\">Hype</a> by David Heinemeier Hansson"
 docs_dir = "docs"
 site_dir = "public"
 nav = [

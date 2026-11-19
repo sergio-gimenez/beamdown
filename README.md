@@ -9,6 +9,8 @@
 A presentation app for GNOME. Your agent drafts the deck in Markdown, following your<br>
 brand guidelines. You finish it in a visual editor, and export to PDF or PowerPoint.
 
+<sub>Inspired by <a href="https://github.com/omacom/hype">Hype</a>, which DHH showed in his 2026 Rails keynote. Beamdown started as a fork of it<br>and has since diverged too much to follow it, so it is now its own app.</sub>
+
 [**Documentation**](https://beamdown.sergiogimenez.com) ·
 [Get started](https://beamdown.sergiogimenez.com/start/) ·
 [Why Beamdown](https://beamdown.sergiogimenez.com/why/)
@@ -72,6 +74,8 @@ cd beamdown
 ./build/beamdown open examples/tour/presentation.md
 ```
 
-## Credits
+## Where it comes from
 
-Beamdown is a fork of [Hype](https://github.com/omacom/hype) by David Heinemeier Hansson, and it keeps Hype's file format. It has since gone its own way, toward GNOME and toward everyday and technical talks; [Why Beamdown](https://beamdown.sergiogimenez.com/why/) tells the story. MIT licensed, see [LICENSE](LICENSE).
+Beamdown is inspired by [Hype](https://github.com/omacom/hype), the Markdown presentation app that David Heinemeier Hansson (DHH) showed in his 2026 Rails keynote. It started as a fork of Hype. It has since diverged too much to follow upstream: a GNOME look, built-in slide themes, Beamer's toolbox and an agent-first workflow. So it is now its own app, though it still reads and writes Hype's file format, so a presentation opens in either. [Why Beamdown](https://beamdown.sergiogimenez.com/why/) tells the whole story.
+
+Hype's history and MIT license come with the fork; see [LICENSE](LICENSE).
