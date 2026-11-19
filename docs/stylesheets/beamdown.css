@@ -34,6 +34,13 @@
   --md-typeset-a-color: #78aeed;
 }
 
+/* White on Night, as the brand asks; the theme's grey text is too soft for big headings. */
+[data-md-color-scheme="slate"] .md-typeset h1,
+[data-md-color-scheme="slate"] .md-typeset h2,
+[data-md-color-scheme="slate"] .bd-hero__tagline {
+  color: #ffffff;
+}
+
 /* Headings in the display weight, as on the slides. */
 .md-typeset h1,
 .md-typeset h2 {
