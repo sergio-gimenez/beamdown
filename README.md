@@ -9,7 +9,7 @@
 A presentation app for GNOME. Your agent drafts the deck in Markdown, following your<br>
 brand guidelines. You finish it in a visual editor, and export to PDF or PowerPoint.
 
-<sub>Inspired by <a href="https://github.com/omacom/hype">Hype</a>, which DHH showed in his 2026 Rails keynote. Beamdown started as a fork of it<br>and has since diverged too much to follow it, so it is now its own app.</sub>
+<sub>Inspired by <a href="https://github.com/omacom/hype">Hype</a>, which DHH showed in his <a href="https://www.youtube.com/watch?v=vDjW_dRyKXY&t=3081s">Rails World 2026 opening keynote</a>.<br>Beamdown started as a fork of it and has since diverged too much to follow it, so it is now its own app.</sub>
 
 [**Documentation**](https://beamdown.sergiogimenez.com) ·
 [Get started](https://beamdown.sergiogimenez.com/start/) ·
@@ -76,6 +76,6 @@ cd beamdown
 
 ## Where it comes from
 
-Beamdown is inspired by [Hype](https://github.com/omacom/hype), the Markdown presentation app that David Heinemeier Hansson (DHH) showed in his 2026 Rails keynote. It started as a fork of Hype. It has since diverged too much to follow upstream: a GNOME look, built-in slide themes, Beamer's toolbox and an agent-first workflow. So it is now its own app, though it still reads and writes Hype's file format, so a presentation opens in either. [Why Beamdown](https://beamdown.sergiogimenez.com/why/) tells the whole story.
+Beamdown is inspired by [Hype](https://github.com/omacom/hype), the Markdown presentation app that David Heinemeier Hansson (DHH) showed in his [Rails World 2026 opening keynote](https://www.youtube.com/watch?v=vDjW_dRyKXY&t=3081s). It started as a fork of Hype. It has since diverged too much to follow upstream: a GNOME look, built-in slide themes, Beamer's toolbox and an agent-first workflow. So it is now its own app, though it still reads and writes Hype's file format, so a presentation opens in either. [Why Beamdown](https://beamdown.sergiogimenez.com/why/) tells the whole story.
 
 Hype's history and MIT license come with the fork; see [LICENSE](LICENSE).

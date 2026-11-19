@@ -2,7 +2,7 @@
 
 I like LaTeX Beamer. Sections, build steps and real math suit a technical talk. But Beamer is made for academic talks, and it is hard to use: every slide is a LaTeX frame that you compile to see. Pandoc made life easy here, since you write Markdown and pandoc turns it into Beamer slides.
 
-Then I saw Hype, David Heinemeier Hansson's Markdown presentation app, in his 2026 Rails keynote. It had what the pandoc route lacks: a visual editor with a live preview, still on one Markdown file. I forked it and made it suit my needs, adding the Beamer features I missed and a look that fits GNOME.
+Then I saw Hype, David Heinemeier Hansson's Markdown presentation app, in his [Rails World 2026 opening keynote](https://www.youtube.com/watch?v=vDjW_dRyKXY&t=3081s). It had what the pandoc route lacks: a visual editor with a live preview, still on one Markdown file. I forked it and made it suit my needs, adding the Beamer features I missed and a look that fits GNOME.
 
 Beamdown started as a fork of [Hype](https://github.com/omacom/hype), made for [Omarchy](https://omarchy.org). It has since diverged too much to follow upstream, so it is now its own app. It still reads and writes Hype's file format, so a presentation opens in either.
 
