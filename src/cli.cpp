@@ -334,7 +334,7 @@ int exportDeck(const QStringList &arguments) {
 int create(const QStringList &arguments) {
     Command command("new", "Start a presentation, with images/ and videos/ beside it.");
     command.parser.addOption({"title", "Presentation title (default: the file name)", "title"});
-    command.parser.addOption({"theme", "Installed theme; see hype themes (default: tokyo-night)", "name"});
+    command.parser.addOption({"theme", "Installed theme; see beamdown themes (default: adwaita)", "name"});
     command.parser.addOption({"font", "Installed font family (default: JetBrains Mono)", "family"});
     command.json();
     command.parser.process(arguments);
@@ -387,7 +387,7 @@ int themes(const QStringList &arguments) {
 // As the hey and basecamp tools do: one shared copy, linked into Claude Code, found directly by Codex.
 int skill(const QStringList &arguments) {
     Command command("skill", "Print the agent skill, or install it for your coding agents with: skill install.", false);
-    command.parser.addPositionalArgument("install", "Copy to ~/.agents/skills/hype and link into ~/.claude/skills", "[install]");
+    command.parser.addPositionalArgument("install", "Copy to ~/.agents/skills/beamdown and link into ~/.claude/skills", "[install]");
     command.parser.process(arguments);
     QFile bundled(":/skill.md");
     if (!bundled.open(QIODevice::ReadOnly))
@@ -398,22 +398,22 @@ int skill(const QStringList &arguments) {
         return 0;
     }
     if (command.argument(1) != "install")
-        return fail("Use hype skill to print the skill, or hype skill install.");
+        return fail("Use beamdown skill to print the skill, or beamdown skill install.");
     const QDir home = QDir::home();
-    const QString directory = home.filePath(".agents/skills/hype");
+    const QString directory = home.filePath(".agents/skills/beamdown");
     QSaveFile file(directory + "/SKILL.md");
     if (!QDir().mkpath(directory) || !file.open(QIODevice::WriteOnly) || file.write(text) < 0 || !file.commit())
         return fail("Could not write " + file.fileName());
     print(stdout, "Installed " + file.fileName());
     if (!home.exists(".claude"))
         return 0;
-    const QString link = home.filePath(".claude/skills/hype");
+    const QString link = home.filePath(".claude/skills/beamdown");
     const QFileInfo existing(link);
     if (existing.isSymLink())
         QFile::remove(link);
     else if (existing.exists())
         return fail(link + " exists and is not a link; leaving it alone.");
-    if (!home.mkpath(".claude/skills") || !QFile::link("../../.agents/skills/hype", link))
+    if (!home.mkpath(".claude/skills") || !QFile::link("../../.agents/skills/beamdown", link))
         return fail("Could not link " + link);
     print(stdout, "Linked " + link);
     return 0;
@@ -430,7 +430,7 @@ int help(const QStringList &arguments) {
     }
     if (isCliCommand(topic) && topic != "help")
         return runCli({arguments[0], topic, "--help"});
-    print(stdout, "Usage: hype <command> [options]\n\n" + cliSummary());
+    print(stdout, "Usage: beamdown <command> [options]\n\n" + cliSummary());
     return 0;
 }
 } // namespace
@@ -438,7 +438,7 @@ int help(const QStringList &arguments) {
 QString cliSummary() {
     return "Editor:\n"
            "  open [presentation]             Open the editor, on the last presentation by default\n\n"
-           "Commands that need no display (hype help <command> for options):\n"
+           "Commands that need no display (beamdown help <command> for options):\n"
            "  new <presentation>              Start a presentation\n"
            "  check <presentation>            Report every problem, with slide and line\n"
            "  slides <presentation>           Outline the slides\n"

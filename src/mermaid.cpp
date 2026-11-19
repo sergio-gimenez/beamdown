@@ -39,7 +39,7 @@ QByteArray config(const QVariantMap &palette) {
         .toJson(QJsonDocument::Compact);
 }
 QString cacheFolder() {
-    return QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation) + "/hype/mermaid";
+    return QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation) + "/beamdown/mermaid";
 }
 bool run(const QString &program, const QStringList &arguments, const QString &folder, QString *output) {
     QProcess process;

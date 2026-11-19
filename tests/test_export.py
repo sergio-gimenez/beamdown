@@ -11,7 +11,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 import zlib
 
-APP = Path(__file__).resolve().parents[1] / 'build/hype'
+APP = Path(__file__).resolve().parents[1] / 'build/beamdown'
 NS = {'p': 'http://schemas.openxmlformats.org/presentationml/2006/main',
       'a': 'http://schemas.openxmlformats.org/drawingml/2006/main',
       'r': 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'}
@@ -49,7 +49,7 @@ class ExportTests(unittest.TestCase):
         image(self.root / 'images/photo.png')
         tools = self.root / 'tools'
         tools.mkdir()
-        self.app = tools / 'hype'
+        self.app = tools / 'beamdown'
         shutil.copy2(APP, self.app)
         for tool in ['ffmpeg', 'ffprobe', 'source-highlight']:
             (tools / tool).symlink_to(shutil.which(tool))
@@ -255,7 +255,7 @@ class ExportTests(unittest.TestCase):
         self.assert_color(self.movie_pixel(movie, 0.05, 180, 100), (255, 0, 0))  # Undarkened.
         self.assert_color(self.movie_pixel(movie, 0.25, 180, 100), (0, 0, 255))
         corner = self.movie_pixel(movie, 0.05, 150, 100)
-        self.assertLess(corner[0], 100, corner)  # Left of the image is the theme background.
+        self.assert_color(corner, (255, 255, 255))  # Left of the image is the theme background.
         self.assert_color(self.movie_pixel(movie, 0.05, 5, 5), corner)  # No darkening overlay.
 
     def test_animation_conversion_failure_preserves_export(self):

@@ -35,7 +35,7 @@ QString cacheKey(const MathSpan &math, bool serif) {
     return QString::fromLatin1(QCryptographicHash::hash(identity.toUtf8(), QCryptographicHash::Sha1).toHex());
 }
 QString cacheFolder() {
-    return QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation) + "/hype/math";
+    return QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation) + "/beamdown/math";
 }
 // SVG path data, as dvisvgm writes glyph outlines: moves, lines, and cubic and quadratic curves.
 QPainterPath pathData(const QString &data) {

@@ -1,5 +1,9 @@
 #include "apptheme.h"
+#include "markdownhighlighter.h"
 #include <QColor>
+#include <QDBusArgument>
+#include <QDBusConnection>
+#include <QDBusMessage>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -30,16 +34,119 @@ AppTheme::AppTheme(const QString &currentDirectory, QObject *parent)
     connect(&m_reload, &QTimer::timeout, this, &AppTheme::reload);
     connect(&m_watcher, &QFileSystemWatcher::fileChanged, this, [this] { m_reload.start(); });
     connect(&m_watcher, &QFileSystemWatcher::directoryChanged, this, [this] { m_reload.start(); });
+    followPortal();
     reload();
+}
+static const char *portalService = "org.freedesktop.portal.Desktop";
+static const char *portalPath = "/org/freedesktop/portal/desktop";
+static const char *portalSettings = "org.freedesktop.portal.Settings";
+static const char *appearance = "org.freedesktop.appearance";
+// GNOME's dark style and accent color, read once up front so the window opens in the
+// right colors, then followed as they change. HYPE_COLOR_SCHEME=light|dark pins the style.
+void AppTheme::followPortal() {
+    const QString pinned = qEnvironmentVariable("HYPE_COLOR_SCHEME");
+    if (pinned == "light" || pinned == "dark") {
+        m_dark = pinned == "dark";
+        return;
+    }
+    auto bus = QDBusConnection::sessionBus();
+    if (!bus.isConnected())
+        return;
+    for (const QString key : {"color-scheme", "accent-color"}) {
+        auto call = QDBusMessage::createMethodCall(portalService, portalPath, portalSettings, "ReadOne");
+        call.setArguments({appearance, key});
+        const auto reply = bus.call(call, QDBus::Block, 300);
+        if (reply.type() == QDBusMessage::ReplyMessage && !reply.arguments().isEmpty())
+            readPortal(key, reply.arguments().first().value<QDBusVariant>().variant());
+    }
+    bus.connect(portalService, portalPath, portalSettings, "SettingChanged", this,
+                SLOT(portalSettingChanged(QString, QString, QDBusVariant)));
+}
+void AppTheme::readPortal(const QString &key, const QVariant &value) {
+    if (key == "color-scheme") {
+        m_dark = value.toUInt() == 1; // 0 no preference, 1 dark, 2 light
+    } else if (key == "accent-color" && value.canConvert<QDBusArgument>()) {
+        const auto argument = value.value<QDBusArgument>();
+        double red = -1, green = -1, blue = -1;
+        argument.beginStructure();
+        argument >> red >> green >> blue;
+        argument.endStructure();
+        // Out of range means the desktop has no accent color.
+        if (red >= 0 && red <= 1 && green >= 0 && green <= 1 && blue >= 0 && blue <= 1)
+            m_accent = QColor::fromRgbF(red, green, blue);
+    }
+}
+void AppTheme::portalSettingChanged(const QString &group, const QString &key, const QDBusVariant &value) {
+    if (group != appearance)
+        return;
+    readPortal(key, value.variant());
+    m_reload.start();
+}
+// libadwaita's named colors, flattened onto their backgrounds.
+QVariantMap AppTheme::adwaitaColors(bool dark, const QColor &accent) {
+    const QColor white("#ffffff");
+    const QColor window = dark ? QColor("#222226") : QColor("#fafafb");
+    const QColor view = dark ? QColor("#1d1d20") : white;
+    const QColor fg = dark ? white : mix(window, QColor("#000006"), .8);
+    const QColor border = mix(window, fg, .15);
+    const QColor selection = mix(view, accent, .3);
+    const QColor inactiveSelection = mix(border, accent, .5);
+    return {{"background", view},
+            {"foreground", fg},
+            {"accent", accent},
+            {"panel", window},
+            {"headerbar", dark ? QColor("#2e2e32") : white},
+            {"sidebar", dark ? QColor("#2e2e32") : QColor("#ebebed")},
+            {"popover", dark ? QColor("#36363a") : white},
+            // The text box stands out from the stage around it: raised like a card on dark,
+            // white on a light grey stage on light.
+            {"stage", dark ? view : mix(window, fg, .04)},
+            {"editor", dark ? mix(window, white, .08) : white},
+            {"button", mix(window, fg, .1)},
+            {"hover", mix(window, fg, .08)},
+            {"border", border},
+            {"muted", mix(window, fg, .55)},
+            {"selection", selection},
+            {"selectionText", contrastInk(selection)},
+            {"inactiveSelection", inactiveSelection},
+            {"inactiveSelectionText", contrastInk(inactiveSelection)},
+            // Suggested actions keep white text on every GNOME accent.
+            {"accentText", white},
+            {"accentHover", mix(accent, white, .12)},
+            {"windowBorder", accent},
+            {"error", dark ? QColor("#ff7b63") : QColor("#c01c28")},
+            // GNOME's palette, a shade lighter on dark and darker on light, as its text editor does.
+            {"syntaxHeading", dark ? mix(accent, white, .45) : mix(accent, QColor("#000006"), .25)},
+            {"syntaxMarker", mix(window, fg, .5)},
+            {"syntaxCode", dark ? QColor("#8ff0a4") : QColor("#1c7a48")},
+            {"syntaxLink", dark ? QColor("#dc8add") : QColor("#813d9c")},
+            {"syntaxKey", dark ? QColor("#ffbe6f") : QColor("#c64600")},
+            {"syntaxMath", dark ? QColor("#f9f06b") : QColor("#9c6e03")},
+            {"syntaxComment", mix(window, fg, .5)}};
+}
+QVariantMap AppTheme::syntaxColors() const {
+    QVariantMap colors;
+    for (const QString role : {"heading", "marker", "code", "link", "key", "math", "comment"})
+        colors[role] = m_colors.value("syntax" + role.left(1).toUpper() + role.mid(1));
+    return colors;
+}
+void AppTheme::highlight(QQuickTextDocument *document) {
+    if (!document || !document->textDocument())
+        return;
+    // The document owns its highlighter, so it goes with the editor.
+    auto *highlighter = new MarkdownHighlighter(document->textDocument());
+    highlighter->setColors(syntaxColors());
+    m_highlighters.append(highlighter);
 }
 void AppTheme::reload() {
     const QString theme = m_currentDirectory + "/theme", path = theme + "/colors.toml";
     QMap<QString, QColor> values;
     QFile file(path);
-    if (file.open(QIODevice::ReadOnly)) {
+    const bool omarchy = file.open(QIODevice::ReadOnly);
+    if (omarchy) {
         // Quoted or bare hex with an optional note. Quotes must pair; comments need no gap.
         const QRegularExpression entry(
-            R"re(^\s*([a-z_]+)\s*=\s*(["']?)(#[0-9a-fA-F]{6})\2\s*(?:#.*)?\s*$)re");
+            R"re(^\s*([a-z_][a-z0-9_]*)\s*=\s*(["']?)(#[0-9a-fA-F]{6})\2\s*(?:#.*)?\s*$)re");
         while (!file.atEnd()) {
             const auto match = entry.match(QString::fromUtf8(file.readLine()));
             if (match.hasMatch())
@@ -52,7 +159,7 @@ void AppTheme::reload() {
     const QColor selection = values.value("selection", mix(bg, accent, .3));
     const QColor border = mix(bg, fg, .22);
     const QColor inactiveSelection = mix(border, accent, .7);
-    const QVariantMap colors{{"background", bg},
+    QVariantMap colors{{"background", bg},
                              {"foreground", fg},
                              {"accent", accent},
                              {"panel", mix(bg, fg, .025)},
@@ -68,6 +175,15 @@ void AppTheme::reload() {
                              {"accentHover", mix(accent, fg, .15)},
                              {"windowBorder", values.value("active_border_color", accent)},
                              {"error", values.value("red", QColor("#d94b4b"))}};
+    colors["headerbar"] = colors["sidebar"] = colors["popover"] = colors["panel"];
+    colors["stage"] = colors["editor"] = bg;
+    // Omarchy's terminal colors: 2 green, 3 yellow, 5 magenta, 6 cyan.
+    colors["syntaxHeading"] = accent;
+    colors["syntaxMarker"] = colors["syntaxComment"] = mix(bg, fg, .5);
+    colors["syntaxCode"] = values.value("color2", mix(fg, QColor("#3a944a"), .6));
+    colors["syntaxKey"] = values.value("color3", mix(fg, QColor("#c88800"), .6));
+    colors["syntaxLink"] = values.value("color5", mix(fg, QColor("#9141ac"), .6));
+    colors["syntaxMath"] = values.value("color6", mix(fg, QColor("#2190a4"), .6));
     // Popups take the desktop's window corners: square unless the theme rounds them.
     int rounding = 0;
     QStringList windowFiles;
@@ -83,9 +199,17 @@ void AppTheme::reload() {
                 rounding = match.captured(1).toInt();
         }
     }
-    if (colors != m_colors || rounding != m_rounding) {
+    if (!omarchy) {
+        colors = adwaitaColors(m_dark, m_accent);
+        rounding = 12;
+    }
+    if (colors != m_colors || rounding != m_rounding || omarchy == m_adwaita) {
         m_colors = colors;
         m_rounding = rounding;
+        m_adwaita = !omarchy;
+        for (const auto &highlighter : m_highlighters)
+            if (highlighter)
+                highlighter->setColors(syntaxColors());
         emit changed();
     }
     // Theme switching replaces symlinks; atomic saves replace file inodes.

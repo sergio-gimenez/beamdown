@@ -5,7 +5,7 @@ import subprocess
 import tempfile
 import unittest
 
-APP = Path(__file__).resolve().parents[1] / 'build/hype'
+APP = Path(__file__).resolve().parents[1] / 'build/beamdown'
 
 
 class ShutdownTests(unittest.TestCase):

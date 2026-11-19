@@ -1,8 +1,8 @@
-# Writing a Hype presentation
+# Writing a Beamdown presentation
 
 A presentation is one Markdown file. Edit it with any text tool, then use
-`hype check`, `hype render`, and `hype export` to verify and ship it. If the
-file is open in the Hype editor, saved edits appear there as long as the editor
+`beamdown check`, `beamdown render`, and `beamdown export` to verify and ship it. If the
+file is open in the Beamdown editor, saved edits appear there as long as the editor
 has no unsaved changes of its own.
 
 ## Layout on disk
@@ -22,16 +22,19 @@ and `![](demo.mp4)` reads `videos/demo.mp4`.
 ```markdown
 ---
 title: "My talk"
-theme: tokyo-night
+theme: adwaita
 font: "JetBrains Mono"
 ---
 ```
 
-`hype new` writes this for you, along with the theme's `color_*` values.
-`hype themes` lists the installed themes. Any `color_*` value can be
+`beamdown new` writes this for you, along with the theme's `color_*` values.
+`beamdown themes` lists the themes: the bundled `adwaita` (the default),
+`adwaita-dark`, `beamer`, `metropolis`, `metropolis-dark` and `tokyo-night`,
+and any installed Omarchy theme. Any `color_*` value can be
 overridden with a `#rrggbb` color: `color_background`, `color_foreground`,
 `color_accent`, `color_green`, `color_red`, `color_yellow`, `color_magenta`,
-`color_cyan`, `color_dark_foreground`.
+`color_cyan`, `color_dark_foreground`. `color_heading` colors headings, which
+otherwise take the text color; the `beamer` theme sets it.
 
 For documents more than talks, such as a proposal or a brand book, fix the
 typography instead of letting each slide grow its text to fill the space:
@@ -52,12 +55,12 @@ weight from 100 to 900 (default 700). `text_size` is the body text's size in
 pixels on a 1080p slide, from 8 to 200; with it, every slide uses that size,
 headings use `heading_size` (default two and a half times the text), and text
 starts at the top of its area, so headings line up from slide to slide. Text
-still shrinks when a slide holds too much, and `hype check` warns when it does.
+still shrinks when a slide holds too much, and `beamdown check` warns when it does.
 `header` adds a small running header: this text on the left, and the slide's
 section and number on the right.
 
 A slide names its section, and can move its text up or down, in a `hype`
-comment:
+comment (Beamdown keeps Hype's file format, so a presentation opens in both):
 
 ```markdown
 <!-- hype: section="Context" vertical="center" -->
@@ -68,7 +71,7 @@ has a `text_size`, where it starts at the top.
 
 `hidden="true"` keeps a slide in the deck but out of the talk: presenting
 skips it, exports leave it out, and the running header does not count it.
-`hype export` and `hype render` take `--include-hidden` to keep such slides.
+`beamdown export` and `beamdown render` take `--include-hidden` to keep such slides.
 
 ## Build steps
 
@@ -92,9 +95,9 @@ time; the first item shows with what comes before it. Fence a list in
 picture after a pause appears on its own step. Steps are laid out as the
 finished slide, so text never moves as it appears. A PDF gives each step a
 page, as beamer does; `handout: true` (or pandoc's `classoption: handout`) in
-the front matter, or `hype export talk.pdf --handout`, gives one finished page
+the front matter, or `beamdown export talk.pdf --handout`, gives one finished page
 per slide instead. PowerPoint shows finished slides, and
-`hype render --slide 3 --step 2` renders one step.
+`beamdown render --slide 3 --step 2` renders one step.
 
 ## Math
 
@@ -114,14 +117,14 @@ with $\ell_{\text{radio}} \approx 5$–$20\,\text{ms}$
 ```
 
 Math needs `latex` and `dvisvgm` from TeX Live. Each formula is typeset once
-and kept in `~/.cache/hype/math`. A formula LaTeX rejects shows as red TeX on
-its slide, and `hype check` reports LaTeX's message with the formula.
+and kept in `~/.cache/beamdown/math`. A formula LaTeX rejects shows as red TeX on
+its slide, and `beamdown check` reports LaTeX's message with the formula.
 
 ## Slides
 
 Separate slides with a line holding only `---`, with a blank line on either
 side. Slides are 16:9 and text is sized to fit, so say less per slide: a
-headline, a few bullets, or one short quote. `hype check` warns when a slide
+headline, a few bullets, or one short quote. `beamdown check` warns when a slide
 holds so much that its text shrinks below a readable size.
 
 ````markdown
@@ -193,8 +196,8 @@ A `mermaid` code block draws a Mermaid diagram in the same place, laid out as
 GitHub lays it out and in the deck's colors and font. `mermaid_theme:
 default`, `neutral`, `dark`, or `forest` in the front matter uses one of
 Mermaid's own themes instead. It needs the Mermaid CLI (`mmdc`) and
-`pdftocairo`; each diagram is drawn once and kept in `~/.cache/hype/mermaid`,
-and `hype check` reports Mermaid's message for a diagram it cannot draw.
+`pdftocairo`; each diagram is drawn once and kept in `~/.cache/beamdown/mermaid`,
+and `beamdown check` reports Mermaid's message for a diagram it cannot draw.
 
 ````markdown
 ```mermaid
@@ -233,12 +236,12 @@ images, not videos, and cannot be combined with `fit`, `span`, `position`, or
 ## Commands
 
 ```text
-hype new talk/presentation.md --title "My talk" --theme tokyo-night
-hype check talk/presentation.md --json     every problem, with slide and line
-hype slides talk/presentation.md --json    an outline of the slides
-hype render talk/presentation.md --slide 3 -o slide.png
-hype render talk/presentation.md -o slides/        every slide, plus slides.json
-hype export talk/presentation.md talk.pdf          or talk.pptx
+beamdown new talk/presentation.md --title "My talk" --theme metropolis
+beamdown check talk/presentation.md --json     every problem, with slide and line
+beamdown slides talk/presentation.md --json    an outline of the slides
+beamdown render talk/presentation.md --slide 3 -o slide.png
+beamdown render talk/presentation.md -o slides/        every slide, plus slides.json
+beamdown export talk/presentation.md talk.pdf          or talk.pptx
 ```
 
 Commands need no display. They exit 0 on success and 1 on failure, with errors

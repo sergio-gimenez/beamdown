@@ -1,38 +1,62 @@
-# Hype
+# Beamdown
 
-Simple presentations, written in Markdown. Big headlines, images, video, and code—with a visual editor to put everything in order.
+**PowerPoint + LaTeX Beamer, but Markdown-driven.**
 
-Hype is a native app for Omarchy. Your presentation is a Markdown file with its media alongside it. Choose an installed Omarchy theme, pick a font, and export to PDF or PowerPoint.
+Beamdown is a presentation app for GNOME. A presentation is one Markdown file with its images and videos beside it. You edit it in a visual editor with a live preview, as in PowerPoint, and you get what LaTeX Beamer does well: build steps, LaTeX math, Mermaid and SVG diagrams, highlighted code, sections with a running header and slide numbers, and a PDF with a page per step. There is no `.tex` file to compile. Export to PDF or PowerPoint from the app or from the command line.
+
+It suits both kinds of talk: an everyday presentation with big headlines and pictures, and a technical one with equations, code and diagrams.
+
+## Why Beamdown
+
+I like LaTeX Beamer. Sections, build steps and real math suit a technical talk. But Beamer is made for academic talks, and it is hard to use: every slide is a LaTeX frame that you compile to see. Pandoc made life easy here, since you write Markdown and pandoc turns it into Beamer slides.
+
+Then I saw Hype, David Heinemeier Hansson's Markdown presentation app, in his 2026 Rails keynote. It had what the pandoc route lacks: a visual editor with a live preview, still on one Markdown file. I forked it and made it suit my needs, adding the Beamer features I missed and a look that fits GNOME.
+
+Beamdown started as a fork of [Hype](https://github.com/omacom/hype), made for [Omarchy](https://omarchy.org), but it has diverged a lot since, so it is now its own app. It still reads and writes Hype's file format, so a presentation opens in either.
+
+What Beamdown adds over Hype:
+
+- **A GNOME look.** Adwaita colors and rounded corners that follow your dark style and accent color as you change them. On Omarchy it still follows the Omarchy theme.
+- **Slide themes built in.** `adwaita` (the default), `adwaita-dark`, `beamer`, `metropolis`, `metropolis-dark` and `tokyo-night`, with no Omarchy needed. Installed Omarchy themes still appear in the list.
+- **Beamer's toolbox.** Build steps with `. . .` and incremental lists, a PDF page per step, LaTeX math, Mermaid diagrams, hidden backup slides, fixed typography with a running header and slide numbers, and split layouts that put an image beside the text.
+- **Editing comforts.** Markdown colored as you type, find with **Ctrl+F** in the slide and **Ctrl+Shift+F** in every slide, an editor you can make taller or shorter, and SVG labels you can retype on the slide.
+
+Hype's history and MIT license come with the fork; see [LICENSE](LICENSE).
 
 ## Install
 
-Install Hype from the [Omarchy Package Repository (OPR)](https://github.com/omacom/omarchy-pkgs):
+Beamdown builds from source. Install a C++17 compiler, make, Qt 6.9 or newer, FFmpeg, and GNU source-highlight. Math also needs `latex` and `dvisvgm` from TeX Live, and diagrams need the Mermaid CLI (`mmdc`) and `pdftocairo`. Then:
 
 ```sh
-omarchy pkg add hype
+git clone https://github.com/sergio-gimenez/beamdown.git
+cd beamdown
+./bin/build
+./build/beamdown open examples/welcome.md
 ```
 
-Then open **Hype** from the app launcher, or run `hype` in a terminal.
+`./bin/install-dev` adds **Beamdown (Development)** to your app launcher, which rebuilds the checkout each time it opens. On Arch, `./bin/install` builds and installs a package with makepkg.
+
+The first time it opens, Beamdown copies Hype's settings and moves Hype's recovery drafts over, so you pick up where you left off.
 
 ## Make a presentation
 
-Open Hype from your app launcher. It reopens your last presentation; use **Ctrl+N** to start a new one, or **Ctrl+O** to choose a Markdown file.
+Open Beamdown from your app launcher. It reopens your last presentation; use **Ctrl+N** to start a new one, or **Ctrl+O** to choose a Markdown file.
 
-In **Visual** mode, select a slide in the sidebar and write its Markdown below the preview. Changes appear as you type. Drag the divider, or the empty part of the formatting bar under it, to give the preview or editor more room, or press **Ctrl+Alt+Up** / **Ctrl+Alt+Down**; **Ctrl+Alt+E** makes the editor tall for long speaker notes and back. Hype remembers the height. Two buttons in the top bar switch modes. The grid button, or **Ctrl+M**, turns the **Overview** on and off, returning to the mode you came from. The button beside it shows a slide in **Visual** mode and `#` in **Markdown** mode; click it, or press **Ctrl+.**, to switch between them. Markdown mode edits the whole presentation, with the same formatting bar on top.
+In **Visual** mode, select a slide in the sidebar and write its Markdown below the preview. Changes appear as you type. Drag the divider, or the empty part of the formatting bar under it, to give the preview or editor more room, or press **Ctrl+Alt+Up** / **Ctrl+Alt+Down**; **Ctrl+Alt+E** makes the editor tall for long speaker notes and back. Beamdown remembers the height. Two buttons in the top bar switch modes. The grid button, or **Ctrl+M**, turns the **Overview** on and off, returning to the mode you came from. The button beside it shows a slide in **Visual** mode and `#` in **Markdown** mode; click it, or press **Ctrl+.**, to switch between them. Markdown mode edits the whole presentation, with the same formatting bar on top.
 
 **Overview** mode fills the window with a grid of every slide. Select, rearrange, duplicate, and delete slides there as you would in the sidebar; the up and down arrows move by a row. Double-click a slide or press **Enter** to open it in Visual mode.
 
-The buttons above the editor apply bold, italic, underline, headlines, code blocks, and hidden comments to your selection. Hype reads `*asterisks*` as italic and `_underscores_` as underline. **Media** adds an image or video; **Layout** opens its layout and background options.
+The buttons above the editor apply bold, italic, underline, headlines, code blocks, and hidden comments to your selection. Beamdown reads `*asterisks*` as italic and `_underscores_` as underline. **Media** adds an image or video; **Layout** opens its layout and background options.
 
 Press **Ctrl+F** to find text in the slide you are editing, or **Ctrl+Shift+F** to find it in every slide; **All slides** in the find bar switches between the two. Matching ignores case. **Enter** or **Down** goes to the next match and **Shift+Enter** or **Up** to the previous one, changing slides as it goes. **Escape** closes the bar and leaves the match selected in the editor. In Markdown mode both shortcuts search the whole presentation.
 
 Use **Ctrl+Enter** or right-click a slide to add a slide after the selection. Drag slides to rearrange them—their Markdown moves with them. Hold a dragged slide near the top or bottom of the sidebar or overview to scroll further. Select several slides with **Shift+click** or **Shift+arrows** to move, duplicate, or delete them together.
 
-Hype saves automatically after a one-second typing pause, or every five seconds while you keep typing. Use **Ctrl+S** to choose a file for a new presentation or save immediately. Hype remembers the last directory you opened or saved to.
+Beamdown saves automatically after a one-second typing pause, or every five seconds while you keep typing. Use **Ctrl+S** to choose a file for a new presentation or save immediately. Beamdown remembers the last directory you opened or saved to.
 
-Every saved version stays in `.hype-backups/` beside your presentation. Hype also keeps local recovery snapshots, including unfinished Markdown and unnamed presentations, and restores your latest draft when you reopen after a crash. Choose **Version history** from the file menu in the top bar to restore an earlier snapshot; your current version remains available there too. Recovery snapshots contain Markdown and slide boundaries, not copies of images or videos. Unfinished code fences are backed up without replacing the last valid presentation file. Finish them before exporting; Hype checks that every slide will be preserved.
+Every saved version stays in `.hype-backups/` beside your presentation (the folder keeps Hype's name, so both apps share it). Beamdown also keeps local recovery snapshots, including unfinished Markdown and unnamed presentations, and restores your latest draft when you reopen after a crash. Choose **Version history** from the file menu in the top bar to restore an earlier snapshot; your current version remains available there too. Recovery snapshots contain Markdown and slide boundaries, not copies of images or videos. Unfinished code fences are backed up without replacing the last valid presentation file. Finish them before exporting; Beamdown checks that every slide will be preserved.
 
-Local recovery snapshots live in `~/.local/state/hype/recovery/` (under `$XDG_STATE_HOME` if set). You can also recover a `.hype-backups/` version manually: copy its `.bak` file to a new `.md` file and open it.
+Local recovery snapshots live in `~/.local/state/beamdown/recovery/` (under `$XDG_STATE_HOME` if set). You can also recover a `.hype-backups/` version manually: copy its `.bak` file to a new `.md` file and open it.
 
 ## Write your slides
 
@@ -83,9 +107,9 @@ The single-slide editor hides the blank lines around slide separators, leaving j
 
 ## Add images and video
 
-Paste an image or a copied image/video file with **Ctrl+V**. Hype asks for a name, saves the file, and adds it to the selected slide. Pasting onto a slide that already has media replaces that media while keeping the text. You can also drag a file onto the preview or use **+ Image / video** to replace the media. Dropping several files puts each additional file on a new slide.
+Paste an image or a copied image/video file with **Ctrl+V**. Beamdown asks for a name, saves the file, and adds it to the selected slide. Pasting onto a slide that already has media replaces that media while keeping the text. You can also drag a file onto the preview or use **+ Image / video** to replace the media. Dropping several files puts each additional file on a new slide.
 
-Pasted still images are sized for a 4K slide without upscaling. Fitted images stay within 3840 × 2160; spanning images retain enough resolution to fill that area without discarding the parts outside the crop. Hype chooses a lossless PNG or WebP, keeping an existing file when it is already smaller and needs no resizing. Original files, videos, animated images, and SVGs are left intact.
+Pasted still images are sized for a 4K slide without upscaling. Fitted images stay within 3840 × 2160; spanning images retain enough resolution to fill that area without discarding the parts outside the crop. Beamdown chooses a lossless PNG or WebP, keeping an existing file when it is already smaller and needs no resizing. Original files, videos, animated images, and SVGs are left intact.
 
 Compression runs in the background. If it takes longer than a second, a progress bar appears over the slide; you can cancel the paste or wait for the filename prompt.
 
@@ -101,7 +125,7 @@ my-talk/
     demo.mp4
 ```
 
-Use just the filename; Hype finds the right directory:
+Use just the filename; Beamdown finds the right directory:
 
 ```markdown
 ![](diagram.png)
@@ -128,7 +152,7 @@ Choose **Fit** or **Span** from the **Layout** menu above the editor, or put lay
 | `![loop muted](demo.mp4)` | Loop a video without sound |
 | `![autoplay=false](demo.mp4)` | Wait for Space to play the video |
 
-For images that leave space around them, Hype matches the background to the image’s edge color when possible. Choose **White**, **Black**, or **Use theme color** from the **Layout** menu to override it, or specify any color: `![fit background=#ffffff](diagram.png)`. Choosing White or Black also switches spanning media to fit so the background is visible.
+For images that leave space around them, Beamdown matches the background to the image’s edge color when possible. Choose **White**, **Black**, or **Use theme color** from the **Layout** menu to override it, or specify any color: `![fit background=#ffffff](diagram.png)`. Choosing White or Black also switches spanning media to fit so the background is visible.
 
 Choose **Background → Blurred image** to fill the slide with a stretched, blurred copy behind the sharp fitted image: `![fit background=blur](portrait.jpg)`. The same background appears in PDF and PowerPoint exports. Animated images use their first frame for the blurred background.
 
@@ -153,9 +177,9 @@ To draw something yourself, write SVG in an `svg` code block. It takes the place
 ```
 ````
 
-Fix a word in a diagram without leaving the slide: double-click a label in an SVG image, type, and press Enter (Escape cancels). Hype rewrites only that label's text in the file in `images/`, so the rest of the SVG stays exactly as it was written, and Ctrl+Z puts the file back. This works for labels written as one `<text>` at an `x` and `y` with no `<tspan>` or `transform`, which is how agents draw; it is for retyping, not for moving shapes, and labels in an `svg` code block are edited in the Markdown instead.
+Fix a word in a diagram without leaving the slide: double-click a label in an SVG image, type, and press Enter (Escape cancels). Beamdown rewrites only that label's text in the file in `images/`, so the rest of the SVG stays exactly as it was written, and Ctrl+Z puts the file back. This works for labels written as one `<text>` at an `x` and `y` with no `<tspan>` or `transform`, which is how agents draw; it is for retyping, not for moving shapes, and labels in an `svg` code block are edited in the Markdown instead.
 
-Draw a diagram as on GitHub with a `mermaid` code block. It takes the image's place like an `svg` block, in the deck's background, text and accent colors and its font, or in one of Mermaid's themes with `mermaid_theme: default` (also `neutral`, `dark`, `forest`). The Mermaid CLI (`mmdc`) lays it out and `pdftocairo` turns it into outlines, so it stays vector in PDF; each diagram is drawn once and cached in `~/.cache/hype/mermaid`, and a deck's diagrams are drawn in the background when it opens.
+Draw a diagram as on GitHub with a `mermaid` code block. It takes the image's place like an `svg` block, in the deck's background, text and accent colors and its font, or in one of Mermaid's themes with `mermaid_theme: default` (also `neutral`, `dark`, `forest`). The Mermaid CLI (`mmdc`) lays it out and `pdftocairo` turns it into outlines, so it stays vector in PDF; each diagram is drawn once and cached in `~/.cache/beamdown/mermaid`, and a deck's diagrams are drawn in the background when it opens.
 
 Animated WebP and GIF images play inline in the preview and while presenting. Use the usual image syntax, such as `![](demo.webp)`, with the file in `images/`. Space pauses or resumes animations while presenting; PowerPoint exports automatically convert them to embedded MP4 videos, preserving the slide layout and playback settings. PDF exports capture their first frame.
 
@@ -163,19 +187,21 @@ Each slide supports one image or video. Copy the whole presentation folder when 
 
 ## Choose your look
 
-The palette and font icons in the toolbar choose an installed Omarchy theme and a presentation font. Hover to see the current choices. Theme colors apply to text, code, and slide backgrounds; your images keep their original colors. Code stays monospaced. Hype’s interface follows your current desktop theme independently and updates when you change it.
+The palette and font icons in the toolbar choose a slide theme and a presentation font. Hover to see the current choices. Beamdown ships `adwaita`, `adwaita-dark`, `beamer` (with its blue frame titles), `metropolis`, `metropolis-dark` and `tokyo-night`, and lists any installed Omarchy theme beside them. Theme colors apply to text, code, and slide backgrounds; your images keep their original colors. Code stays monospaced. `color_heading: "#3333b3"` in the front matter colors headings on their own, as beamer colors its frame titles.
+
+Beamdown's own interface follows the desktop independently of the slides: GNOME's dark style and accent color, or the current Omarchy theme, and it updates when you change them. Both editors color the Markdown as you type: headings, emphasis, code, media and links, comments and `hype` directives, front matter, math, and the lines that break, pause and fence slides.
 
 The header shows the presentation's name with your position in it, such as “Slide 4 of 45”; saving and exporting report their progress on that line. The file icon beside it holds New, Open, Save, Export, and Version history, and is highlighted when you have unsaved changes.
 
 Colors and the font choice are saved in the Markdown file. Install the same font on another computer to keep the typography consistent.
 
-Talks want big text that fills each slide; a proposal or brand book wants the same type on every page. Fix it in the front matter: `text_size: 24` sets body text to 24 pixels on a 1080p slide everywhere, headings take `heading_size` (64, say), and text starts at the top of its area so headings line up from slide to slide. Text still shrinks when a slide holds too much, and `hype check` says so. `heading_font: "Newsreader"` sets headings in a second font and `heading_weight: 400` sets their weight. `header: "Company · Proposal"` adds a small running header with the slide's section and number on the right; name a slide's section with `<!-- hype: section="Context" -->`, and move its text with `vertical="center"` or `vertical="bottom"`.
+Talks want big text that fills each slide; a proposal or brand book wants the same type on every page. Fix it in the front matter: `text_size: 24` sets body text to 24 pixels on a 1080p slide everywhere, headings take `heading_size` (64, say), and text starts at the top of its area so headings line up from slide to slide. Text still shrinks when a slide holds too much, and `beamdown check` says so. `heading_font: "Newsreader"` sets headings in a second font and `heading_weight: 400` sets their weight. `header: "Company · Proposal"` adds a small running header with the slide's section and number on the right; name a slide's section with `<!-- hype: section="Context" -->`, and move its text with `vertical="center"` or `vertical="bottom"`.
 
-Keep a backup slide without showing it: right-click it and choose Hide slide, or add `hidden="true"` to its `hype` comment. A hidden slide stays in the deck, dimmed in the sidebar, but presenting skips it and PDF and PowerPoint exports leave it out; `hype export --include-hidden` keeps it.
+Keep a backup slide without showing it: right-click it and choose Hide slide, or add `hidden="true"` to its `hype` comment. A hidden slide stays in the deck, dimmed in the sidebar, but presenting skips it and PDF and PowerPoint exports leave it out; `beamdown export --include-hidden` keeps it.
 
-Build a slide up point by point, written as pandoc writes beamer slides. A line holding only `. . .` pauses: what follows appears on the next click. `incremental: true` in the front matter reveals every list an item at a time, and `::: incremental` or `::: nonincremental` around a list turns that on or off for it alone. A picture after a pause appears on its own step. Each step is laid out as the finished slide, so nothing moves as it grows. The editor shows the finished slide. A PDF gives every step a page, as beamer does, so it can be presented from any PDF viewer; for a handout with one finished page per slide, add `handout: true` (or pandoc's `classoption: handout`) to the front matter, or export with `hype export talk.pdf --handout`. PowerPoint exports show finished slides.
+Build a slide up point by point, written as pandoc writes beamer slides. A line holding only `. . .` pauses: what follows appears on the next click. `incremental: true` in the front matter reveals every list an item at a time, and `::: incremental` or `::: nonincremental` around a list turns that on or off for it alone. A picture after a pause appears on its own step. Each step is laid out as the finished slide, so nothing moves as it grows. The editor shows the finished slide. A PDF gives every step a page, as beamer does, so it can be presented from any PDF viewer; for a handout with one finished page per slide, add `handout: true` (or pandoc's `classoption: handout`) to the front matter, or export with `beamdown export talk.pdf --handout`. PowerPoint exports show finished slides.
 
-Write math as in pandoc: `$E = mc^2$` in a line and `$$…$$` displayed. Real LaTeX sets it, in beamer's sans-serif math by default or its serif math with `math_font: serif`, with `amsmath`, `amssymb`, `mathtools`, and `bm` loaded. Formulas sit on the text's baseline at its size, take its color, and stay vector in PDF. It needs `latex` and `dvisvgm` from TeX Live; each formula is typeset once and cached in `~/.cache/hype/math`, and `hype check` names any formula LaTeX rejects.
+Write math as in pandoc: `$E = mc^2$` in a line and `$$…$$` displayed. Real LaTeX sets it, in beamer's sans-serif math by default or its serif math with `math_font: serif`, with `amsmath`, `amssymb`, `mathtools`, and `bm` loaded. Formulas sit on the text's baseline at its size, take its color, and stay vector in PDF. It needs `latex` and `dvisvgm` from TeX Live; each formula is typeset once and cached in `~/.cache/beamdown/math`, and `beamdown check` names any formula LaTeX rejects.
 
 ## Present and export
 
@@ -183,7 +209,7 @@ Click **Present** or press **Ctrl+Space** (or **F5**) to toggle fullscreen prese
 
 Finished videos hold their last frame. Press Space again to replay from the beginning.
 
-Choose **Export as PDF** or **Export as PowerPoint** from the file menu in the top bar, or press **Ctrl+E** for PDF and **Ctrl+Shift+E** for PowerPoint, to share your presentation. Both exports are built into Hype. PowerPoint renders slides and converted animations at 4K (3840 × 2160), storing slides as high-quality JPEG like the pictures in a PDF. Slides preserve the rendered appearance rather than exposing editable text and shapes; the receiving computer does not need your fonts installed. Videos are embedded, and animated WebP/GIF images are converted to MP4 automatically without changing the original files. PDF captures still slides.
+Choose **Export as PDF** or **Export as PowerPoint** from the file menu in the top bar, or press **Ctrl+E** for PDF and **Ctrl+Shift+E** for PowerPoint, to share your presentation. Both exports are built into Beamdown. PowerPoint renders slides and converted animations at 4K (3840 × 2160), storing slides as high-quality JPEG like the pictures in a PDF. Slides preserve the rendered appearance rather than exposing editable text and shapes; the receiving computer does not need your fonts installed. Videos are embedded, and animated WebP/GIF images are converted to MP4 automatically without changing the original files. PDF captures still slides.
 
 Export runs in the background. The top bar shows progress through rendering, video conversion, and packaging under the presentation name, with a **Cancel export** button. You can keep editing; the export uses the presentation as it was when you started. Failed or cancelled exports leave an existing file intact.
 
@@ -191,25 +217,25 @@ PDF keeps text as vectors and sizes embedded images for their visible area at 4K
 
 PowerPoint export automatically converts other video formats, including WebM, to H.264 MP4 with AAC audio, leaving your originals untouched. Compatible MP4s are embedded directly. Use `fit` for videos that aren’t 16:9. Video autoplay and looping may vary between presentation apps; playback in Microsoft PowerPoint has not yet been verified.
 
-## Use Hype from the command line
+## Use Beamdown from the command line
 
-Hype's commands need no display, so a script or an AI agent can build a presentation from start to finish. A presentation is just a Markdown file: write it with any tool, then check, preview, and export it with `hype`.
+Beamdown's commands need no display, so a script or an AI agent can build a presentation from start to finish. A presentation is just a Markdown file: write it with any tool, then check, preview, and export it with `beamdown`.
 
 ```sh
-hype new talk/presentation.md --title "My talk" --theme tokyo-night
-hype check talk/presentation.md                   # every problem, with its slide and line
-hype slides talk/presentation.md                  # an outline: number, lines, headline, media
-hype render talk/presentation.md --slide 3 -o slide.png
-hype render talk/presentation.md -o slides/       # every slide, plus slides.json
-hype export talk/presentation.md talk.pdf         # or talk.pptx
-hype themes
+beamdown new talk/presentation.md --title "My talk" --theme metropolis
+beamdown check talk/presentation.md                   # every problem, with its slide and line
+beamdown slides talk/presentation.md                  # an outline: number, lines, headline, media
+beamdown render talk/presentation.md --slide 3 -o slide.png
+beamdown render talk/presentation.md -o slides/       # every slide, plus slides.json
+beamdown export talk/presentation.md talk.pdf         # or talk.pptx
+beamdown themes
 ```
 
 `check` reports all problems at once, such as missing media, invalid layout options, and unfinished code fences, and warns when a slide holds so much text that it shrinks below a readable size. `render --slide` writes a PNG even for a slide with problems, showing them on a banner, so you can look at what went wrong. Add `--json` to any command for structured output, and `--width` to `render` for another size. Commands exit 0 on success and 1 on failure, with errors on stderr.
 
-`hype` alone lists the commands, and `hype open` starts the editor. `hype help format` prints the whole slide format, from front matter to media options, in a form an agent can read once and work from. `hype help <command>` lists a command's options.
+`beamdown` alone lists the commands, and `beamdown open` starts the editor. `beamdown help format` prints the whole slide format, from front matter to media options, in a form an agent can read once and work from. `beamdown help <command>` lists a command's options.
 
-To teach your coding agents about Hype, run `hype skill install`. It copies a short skill to `~/.agents/skills/hype/`, where Codex finds it, and links it into `~/.claude/skills/` for Claude Code. The skill points the agent at `hype help format`, so it stays current as Hype is upgraded. `hype skill` prints it instead.
+To teach your coding agents about Beamdown, run `beamdown skill install`. It copies a short skill to `~/.agents/skills/beamdown/`, where Codex finds it, and links it into `~/.claude/skills/` for Claude Code. The skill points the agent at `beamdown help format`, so it stays current as Beamdown is upgraded. `beamdown skill` prints it instead.
 
 If the presentation is open in the editor, changes written to the file appear there right away, and the editor stays on the slide you were viewing, even when slides are added or removed before it. **Ctrl+Z** undoes such a change. The editor never replaces unsaved changes of its own.
 
@@ -253,27 +279,18 @@ Slide navigation and selection shortcuts apply when the sidebar or preview has f
 | Escape | Leave presentation |
 | Space | Play / pause video while presenting |
 
-With more than one display, Hype sends the slides fullscreen to an external display
+With more than one display, Beamdown sends the slides fullscreen to an external display
 and opens Presenter View on the laptop display with the current slide, next slide,
-and any speaker notes written as `<!-- comments -->`. If Hype is already on an
+and any speaker notes written as `<!-- comments -->`. If Beamdown is already on an
 external display, that display remains the audience display. Navigate from either
 display with the presentation shortcuts. Connecting or disconnecting a display ends
 the show and returns to the editor on a connected display.
 
 The mouse wheel over the sidebar selects the previous or next slide. Home/End jumps to the first/last slide when the focus is in the slides list (Visual mode or Overview) and moves to the start/end of the line when a text box has focus. Page Up/Down scrolls a page; Ctrl+Home/End goes to the start/end of the text. Slide movement shortcuts work when the sidebar, preview, or Overview has focus; they leave the selected slides together and stop at the deck boundaries. While typing, Ctrl+Up/Down navigates one slide and Ctrl+Page Up/Page Down navigates five, keeping the text editor focused.
 
-## Run from source
+## Develop
 
-To build Hype yourself, install a C++17 compiler, make, Qt 6.9 or newer, FFmpeg, and GNU source-highlight; see [the package definition](pkgbuild/PKGBUILD) for dependencies. Then:
-
-```sh
-./bin/build
-./build/hype open examples/welcome.md
-```
-
-`bin/build` uses a Qt toolchain under `build/qt/` when present, then falls back to `qmake6` on your PATH. It checks for Qt 6.9 or newer before compiling. Set `HYPE_QMAKE=/path/to/qmake6` to select a different toolchain.
-
-For a launcher entry that rebuilds this checkout when opened, run `./bin/install-dev` and choose **Hype (Development)**.
+`bin/build` uses a Qt toolchain under `build/qt/` when present, then falls back to `qmake6` on your PATH. It checks for Qt 6.9 or newer before compiling. Set `HYPE_QMAKE=/path/to/qmake6` to select a different toolchain. Internal names, such as the `HYPE_*` variables and the `hype-tests` binary, keep Hype's name.
 
 Run `./bin/test` for the regression suite. After building the tests, the presenter
 check can also run with two virtual displays:

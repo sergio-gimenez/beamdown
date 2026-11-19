@@ -10,12 +10,13 @@ ApplicationWindow {
     id: win
     width: 1400; height: 900; minimumWidth: 900; minimumHeight: 600
     visible: true
-    title: deck.title + (deck.dirty ? " •" : "") + " — Hype"
+    title: deck.title + (deck.dirty ? " •" : "") + " — Beamdown"
     AppTheme { id: appTheme }
     readonly property var ui: appTheme.colors
     readonly property int rounding: appTheme.rounding
     // Small controls soften only when the desktop theme rounds its windows.
-    readonly property int softRadius: Math.min(3, rounding)
+    readonly property int softRadius: appTheme.adwaita ? appTheme.controlRounding : Math.min(3, rounding)
+    readonly property int controlRounding: appTheme.controlRounding
     color: presenting ? ui.background : ui.panel
     palette.window: win.ui.panel; palette.base: win.ui.background; palette.text: win.ui.foreground
     palette.placeholderText: win.ui.muted
@@ -183,11 +184,26 @@ ApplicationWindow {
             player.play()
         }
     }
+    // A mouse wheel glides to where its notches point, and a quick run of notches adds to the
+    // glide under way. A touchpad already moves by the pixel, so it follows the fingers directly.
+    NumberAnimation { id: editorGlide; objectName: "editorGlide"; property: "contentY"; duration: 180; easing.type: Easing.OutCubic }
     function scrollEditor(flick, event) {
         let delta = event.angleDelta.y ? event.angleDelta.y / 120 * 180 : event.pixelDelta.y
         if (!delta) { event.accepted = false; return }
         flick.cancelFlick()
-        flick.contentY = Math.max(0, Math.min(Math.max(0, flick.contentHeight - flick.height + flick.bottomMargin), flick.contentY - delta))
+        const limit = Math.max(0, flick.contentHeight - flick.height + flick.bottomMargin)
+        const clamp = y => Math.max(0, Math.min(limit, y))
+        if (event.phase === Qt.NoScrollPhase) {
+            const from = editorGlide.running && editorGlide.target === flick ? editorGlide.to : flick.contentY
+            editorGlide.stop()
+            editorGlide.target = flick
+            editorGlide.from = flick.contentY
+            editorGlide.to = clamp(from - delta)
+            editorGlide.start()
+        } else {
+            editorGlide.stop()
+            flick.contentY = clamp(flick.contentY - delta)
+        }
         event.accepted = true
     }
     function switchEditingFocus() {
@@ -214,6 +230,8 @@ ApplicationWindow {
         }
     }
     function editorKey(editor, flick, event) {
+        // Typing and paging place the text themselves, so a wheel's glide gives way.
+        editorGlide.stop()
         if (event.key === Qt.Key_Escape && finding) {
             event.accepted = true
             closeFind()
@@ -363,6 +381,7 @@ ApplicationWindow {
         revealMatch(editor, markdown ? sourceFlick : slideScroll.contentItem, match)
     }
     function revealMatch(editor, flick, match) {
+        editorGlide.stop()
         // After the new slide's own scroll to the top, which is also deferred.
         Qt.callLater(function() {
             const first = editor.positionToRectangle(match.start)
@@ -460,6 +479,7 @@ ApplicationWindow {
     function restoreSource(position, focus = true) { revealSource(false, sourceFlick.contentY, focus, 0, position) }
     function alignSource(focus = true, navigationDelta = 0) { revealSource(true, sourceFlick.contentY, focus, navigationDelta, slideTextPosition()) }
     function revealSource(atTop, previousY, focus = true, navigationDelta = 0, position = deck.sourcePosition()) {
+        editorGlide.stop()
         let start = deck.sourcePosition()
         let cursor = position
         let scrollPosition = position
@@ -525,6 +545,8 @@ ApplicationWindow {
             sourceOnlyCursor = -1
             slideEditor.cursorPosition = 0
             if (!sourceEditor.activeFocus) sourceEditor.cursorPosition = slideTextPosition()
+            // A glide on the last slide's text must not carry on into this one.
+            editorGlide.stop()
             Qt.callLater(function() { slideScroll.contentItem.contentY = 0 })
         }
         syncingEditor = false
@@ -736,7 +758,7 @@ ApplicationWindow {
         x: Math.max(16, Math.min(parent.width - width - 16, pasteDialog.center.x - width / 2))
         y: Math.max(16, Math.min(parent.height - height - 16, pasteDialog.center.y - height / 2))
         onClosed: if (deck.compressingImage) deck.cancelPaste()
-        background: Rectangle { color: win.ui.panel; border.color: win.ui.border; radius: win.rounding }
+        background: Rectangle { color: win.ui.popover; border.color: win.ui.border; radius: win.rounding }
         Overlay.modal: Rectangle { color: "#660b0d14" }
         contentItem: ColumnLayout {
             spacing: 18
@@ -781,7 +803,7 @@ ApplicationWindow {
         }
         onOpened: { pasteName.forceActiveFocus(); pasteName.selectAll() }
         onClosed: { deck.cancelPaste(); if (returnFocus) returnFocus.forceActiveFocus() }
-        background: Rectangle { color: win.ui.panel; border.color: win.ui.border; radius: win.rounding }
+        background: Rectangle { color: win.ui.popover; border.color: win.ui.border; radius: win.rounding }
         Overlay.modal: Rectangle { color: "#660b0d14" }
         contentItem: ColumnLayout {
             spacing: 18
@@ -799,7 +821,7 @@ ApplicationWindow {
                     font.pixelSize: 16; color: win.ui.foreground
                     selectionColor: win.ui.selection; selectedTextColor: win.ui.selectionText
                     leftPadding: 12; rightPadding: 12
-                    background: Rectangle { color: win.ui.background; radius: Math.min(4, win.rounding); border.color: pasteName.activeFocus ? win.ui.accent : win.ui.border }
+                    background: Rectangle { color: win.ui.background; radius: win.controlRounding; border.color: pasteName.activeFocus ? win.ui.accent : win.ui.border }
                     onTextEdited: pasteDialog.error = ""
                     onAccepted: if (text.trim()) pasteDialog.save()
                 }
@@ -815,14 +837,14 @@ ApplicationWindow {
                 Button {
                     id: cancelPasteButton; text: "Cancel"; implicitHeight: 38; implicitWidth: 84
                     contentItem: Text { text: parent.text; color: win.ui.foreground; font.pixelSize: 14; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                    background: Rectangle { color: cancelPasteButton.hovered ? win.ui.hover : win.ui.button; radius: Math.min(4, win.rounding); border.color: cancelPasteButton.activeFocus ? win.ui.accent : "transparent" }
+                    background: Rectangle { color: cancelPasteButton.hovered ? win.ui.hover : win.ui.button; radius: win.controlRounding; border.color: cancelPasteButton.activeFocus ? win.ui.accent : "transparent" }
                     onClicked: pasteDialog.close()
                 }
                 Button {
                     id: savePasteButton; text: "Save " + (pasteDialog.isVideo ? "video" : "image")
                     implicitHeight: 38; implicitWidth: 112; enabled: pasteName.text.trim().length > 0
                     contentItem: Text { text: parent.text; color: win.ui.accentText; font.pixelSize: 14; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                    background: Rectangle { color: !savePasteButton.enabled ? win.ui.border : savePasteButton.hovered ? win.ui.accentHover : win.ui.accent; radius: Math.min(4, win.rounding); border.color: savePasteButton.activeFocus ? win.ui.foreground : "transparent" }
+                    background: Rectangle { color: !savePasteButton.enabled ? win.ui.border : savePasteButton.hovered ? win.ui.accentHover : win.ui.accent; radius: win.controlRounding; border.color: savePasteButton.activeFocus ? win.ui.foreground : "transparent" }
                     onClicked: pasteDialog.save()
                 }
             }
@@ -943,6 +965,7 @@ ApplicationWindow {
         required property bool selected
         required property bool hovered
         property bool selectionActive: true
+        property color surround: win.ui.panel
         property size renderSize: Qt.size(340, 192)
         readonly property bool current: deck.selected === slide
         readonly property bool hidden: (deck.revision, deck.isHidden(slide))
@@ -964,10 +987,12 @@ ApplicationWindow {
             Label { id: hiddenLabel; anchors.centerIn: parent; text: "Hidden"; font.pixelSize: 10; color: win.ui.foreground }
         }
         // A ring's inner radius is its radius minus its width, so this one sits outside
-        // the frame and lands exactly on the frame's own corners.
+        // the frame and lands exactly on the frame's own corners. It must reach the square
+        // picture's corner, radius × (√2 − 1) beyond the curve.
         Rectangle {
             visible: frame.radius > 0; anchors.fill: parent; anchors.margins: -border.width; color: "transparent"
-            radius: frame.radius + border.width; border.width: 4; border.color: win.ui.panel
+            radius: frame.radius + border.width; border.color: frame.surround
+            border.width: Math.max(4, Math.ceil(frame.radius * (Math.SQRT2 - 1)) + 1)
         }
         Rectangle {
             anchors.fill: parent; radius: frame.radius; color: "transparent"
@@ -1006,7 +1031,7 @@ ApplicationWindow {
             for (let i = 0; i < count; ++i) widest = Math.max(widest, itemAt(i).implicitWidth)
             return widest + leftPadding + rightPadding
         }
-        background: Rectangle { color: win.ui.panel; border.color: win.ui.border; radius: win.rounding }
+        background: Rectangle { color: win.ui.popover; border.color: win.ui.border; radius: win.rounding }
         delegate: AppMenuItem {}
     }
     component AppMenuItem: MenuItem {
@@ -1032,7 +1057,7 @@ ApplicationWindow {
             Label { id: itemLabel; anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter; text: appMenuItem.text; font: appMenuItem.font; color: appMenuItem.ink }
             Label { id: itemHint; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; text: appMenuItem.hint; font.pixelSize: 12; color: win.ui.muted }
         }
-        background: Rectangle { radius: Math.min(4, win.rounding); color: appMenuItem.highlighted && appMenuItem.enabled ? win.ui.hover : "transparent" }
+        background: Rectangle { radius: win.controlRounding; color: appMenuItem.highlighted && appMenuItem.enabled ? win.ui.hover : "transparent" }
     }
     component AppMenuSeparator: MenuSeparator {
         topPadding: 5; bottomPadding: 5; leftPadding: 6; rightPadding: 6
@@ -1049,7 +1074,7 @@ ApplicationWindow {
         readonly property bool menuOpen: mediaMenu.visible
         Layout.preferredHeight: 48
         background: Rectangle {
-            color: win.ui.background
+            color: win.ui.stage
             Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: win.ui.border; opacity: 0.55 }
         }
         // The buttons sit inside the grip, so they keep their clicks and their arrow cursor. A
@@ -1137,7 +1162,7 @@ ApplicationWindow {
         function focusField() { findField.forceActiveFocus(); findField.selectAll() }
         visible: win.finding && shown
         Layout.fillWidth: true; Layout.preferredHeight: 44
-        color: win.ui.background
+        color: win.ui.stage
         Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: win.ui.border; opacity: 0.55 }
         RowLayout {
             anchors.fill: parent; anchors.leftMargin: findBar.textInset - 10; anchors.rightMargin: 14; spacing: 6
@@ -1149,7 +1174,7 @@ ApplicationWindow {
                 selectionColor: win.ui.selection; selectedTextColor: win.ui.selectionText
                 leftPadding: 10; rightPadding: 10; topPadding: 0; bottomPadding: 0
                 placeholderText: win.markdown ? "Find in presentation" : win.findAll ? "Find in all slides" : "Find in this slide"
-                background: Rectangle { color: win.ui.background; radius: win.softRadius; border.color: findField.activeFocus ? win.ui.accent : win.ui.border }
+                background: Rectangle { color: win.ui.editor; radius: win.softRadius; border.color: findField.activeFocus ? win.ui.accent : win.ui.border }
                 text: win.findQuery
                 onTextEdited: { win.findQuery = text; win.refreshFind(true) }
                 // Window shortcuts would move, select or duplicate slides; here these keys belong to the search.
@@ -1195,14 +1220,18 @@ ApplicationWindow {
         id: topBar
         visible: !win.presenting; height: visible ? 60 : 0
         background: Rectangle {
-            color: win.ui.panel
-            Rectangle { x: win.inset; width: parent.width - 2 * win.inset; height: 1; anchors.bottom: parent.bottom; color: win.ui.border }
+            color: win.ui.headerbar
+            Rectangle {
+                x: appTheme.adwaita ? 0 : win.inset; width: parent.width - 2 * x; height: 1
+                anchors.bottom: parent.bottom; color: win.ui.border
+            }
         }
         Label {
             id: logo; objectName: "hypeLogo"
             anchors.left: parent.left; anchors.leftMargin: win.inset; anchors.verticalCenter: parent.verticalCenter
-            text: "Hype"; font.pixelSize: 22; font.bold: true
-            color: logoHover.hovered ? win.ui.accentHover : win.ui.accent
+            // GNOME header bars name the app quietly; Omarchy's wordmark is loud.
+            text: "Beamdown"; font.pixelSize: appTheme.adwaita ? 17 : 22; font.bold: true
+            color: logoHover.hovered ? win.ui.accentHover : appTheme.adwaita ? win.ui.foreground : win.ui.accent
             Accessible.role: Accessible.Button; Accessible.name: "Keyboard shortcuts"
             ToolTip.visible: logoHover.hovered; ToolTip.delay: 400; ToolTip.text: "Keyboard shortcuts (?)"
             HoverHandler { id: logoHover; cursorShape: Qt.PointingHandCursor }
@@ -1263,7 +1292,7 @@ ApplicationWindow {
                     text: modelData
                     highlighted: themes.highlightedIndex === index
                     contentItem: Text { text: modelData; color: win.ui.foreground; font: themes.font; verticalAlignment: Text.AlignVCenter }
-                    background: Rectangle { color: parent.highlighted ? win.ui.hover : win.ui.panel }
+                    background: Rectangle { color: parent.highlighted ? win.ui.hover : win.ui.popover }
                 }
                 background: Rectangle { color: themes.hovered || themes.popup.visible ? win.ui.hover : "transparent"; radius: win.softRadius }
                 model: deck.themeNames
@@ -1272,7 +1301,7 @@ ApplicationWindow {
                 popup: Popup {
                     y: themes.height + 4; width: 240; padding: 6
                     height: Math.min(contentItem.implicitHeight + 12, 420, win.height - 100)
-                    background: Rectangle { color: win.ui.panel; border.color: win.ui.border; radius: win.rounding }
+                    background: Rectangle { color: win.ui.popover; border.color: win.ui.border; radius: win.rounding }
                     contentItem: ListView {
                         clip: true; implicitHeight: contentHeight
                         model: themes.popup.visible ? themes.delegateModel : null
@@ -1311,13 +1340,13 @@ ApplicationWindow {
                     width: fonts.popup.availableWidth; text: modelData
                     highlighted: fonts.highlightedIndex === index
                     contentItem: Text { text: modelData; color: win.ui.foreground; font: fonts.font; elide: Text.ElideRight; verticalAlignment: Text.AlignVCenter }
-                    background: Rectangle { color: parent.highlighted ? win.ui.hover : win.ui.panel }
+                    background: Rectangle { color: parent.highlighted ? win.ui.hover : win.ui.popover }
                 }
                 background: Rectangle { color: fonts.hovered || fonts.popup.visible ? win.ui.hover : "transparent"; radius: win.softRadius }
                 popup: Popup {
                     y: fonts.height + 4; width: 320; padding: 6
                     height: Math.min(contentItem.implicitHeight + 12, 420, win.height - 100)
-                    background: Rectangle { color: win.ui.panel; border.color: win.ui.border; radius: win.rounding }
+                    background: Rectangle { color: win.ui.popover; border.color: win.ui.border; radius: win.rounding }
                     contentItem: ListView {
                         clip: true; implicitHeight: contentHeight
                         model: fonts.popup.visible ? fonts.delegateModel : null
@@ -1373,7 +1402,7 @@ ApplicationWindow {
         modal: true; focus: true; padding: 28
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
         Overlay.modal: Rectangle { color: Qt.rgba(0, 0, 0, 0.35) }
-        background: Rectangle { color: Qt.alpha(win.ui.panel, 0.92); border.color: win.ui.windowBorder; border.width: 2; radius: win.rounding }
+        background: Rectangle { color: Qt.alpha(win.ui.popover, 0.92); border.color: appTheme.adwaita ? win.ui.border : win.ui.windowBorder; border.width: appTheme.adwaita ? 1 : 2; radius: win.rounding }
         readonly property var groups: [
             { title: "Presentation", keys: [
                 ["Ctrl+N", "New presentation"], ["Ctrl+O", "Open"], ["Ctrl+S", "Save"], ["Ctrl+Shift+S", "Save as"],
@@ -1574,7 +1603,7 @@ ApplicationWindow {
             }
         }
         Rectangle {
-            visible: !win.presenting && !win.overview; Layout.preferredWidth: 232; Layout.fillHeight: true; color: win.ui.panel
+            visible: !win.presenting && !win.overview; Layout.preferredWidth: 232; Layout.fillHeight: true; color: win.ui.sidebar
             ColumnLayout {
                 anchors.fill: parent; anchors.margins: win.inset; spacing: 10
                 ListView {
@@ -1658,6 +1687,7 @@ ApplicationWindow {
                             objectName: "sidebarSlideFrame" + thumbnail.index
                             width: parent.width; height: parent.height
                             slide: thumbnail.index; selected: thumbnail.selected; hovered: thumbnailHover.hovered
+                            surround: win.ui.sidebar
                             // Keep selection visible but quiet while keyboard focus is in the editor.
                             selectionActive: thumbnails.activeFocus || stage.activeFocus
                         }
@@ -1730,7 +1760,7 @@ ApplicationWindow {
         // The color sits behind the split rather than as its background: with a background,
         // SplitView finds that instead of the handle under the pointer, and the handle won't drag.
         Rectangle {
-            color: win.ui.background
+            color: win.presenting ? win.ui.background : win.ui.stage
             visible: (!win.markdown && !win.overview) || win.presenting
             Layout.fillWidth: true; Layout.fillHeight: true
             Layout.margins: win.presenting ? 0 : win.inset; Layout.leftMargin: 0
@@ -1739,7 +1769,13 @@ ApplicationWindow {
                 anchors.fill: parent
                 handle: Rectangle {
                     implicitHeight: win.presenting ? 0 : 6
-                    color: SplitHandle.hovered || SplitHandle.pressed ? win.ui.accent : win.ui.border
+                    readonly property bool lit: SplitHandle.hovered || SplitHandle.pressed
+                    // GNOME draws a pane handle as a hairline inside the wider grab area.
+                    color: appTheme.adwaita ? "transparent" : lit ? win.ui.accent : win.ui.border
+                    Rectangle {
+                        visible: appTheme.adwaita; width: parent.width; anchors.verticalCenter: parent.verticalCenter
+                        height: parent.lit ? 2 : 1; color: parent.lit ? win.ui.accent : win.ui.border
+                    }
                 }
                 // The editor can take everything but the stage's minimum; a drag is remembered.
                 readonly property real editorMaximum: Math.max(editorMinimum, height - 166)
@@ -1751,6 +1787,11 @@ ApplicationWindow {
                     property real slideWidth: Math.min(width-margin*2,(height-margin*2)*16/9)
                     Item {
                         id: slideFrame; objectName: "slideFrame"; width: stage.slideWidth; height: width*9/16; anchors.centerIn: parent
+                        // A hairline keeps a white slide apart from GNOME's white editing area.
+                        Rectangle {
+                            visible: appTheme.adwaita && !win.presenting; z: -1
+                            anchors.fill: parent; anchors.margins: -1; color: "transparent"; border.color: win.ui.border
+                        }
                         // Keep the fast thumbnail behind the full render. Even if it remains visible
                         // briefly after loading, it cannot cover the sharp image once that is ready.
                         Image {
@@ -1882,7 +1923,7 @@ ApplicationWindow {
                     Rectangle {
                         objectName: "slideEditorFrame"
                         Layout.fillWidth: true; Layout.fillHeight: true
-                        color: win.ui.background; radius: win.softRadius
+                        color: win.ui.editor; radius: win.softRadius
                         readonly property color focusStroke: win.focusedEditor === "slide" && !win.popupOpen ? win.ui.inactiveSelection : win.ui.border
                         border.color: focusStroke; border.width: 1
                         ScrollView {
@@ -1897,6 +1938,7 @@ ApplicationWindow {
                                 id: slideEditor; objectName: "slideEditor"; persistentSelection: true; textFormat: TextEdit.PlainText; color: win.ui.foreground; selectionColor: win.ui.selection; selectedTextColor: win.ui.selectionText; font.family: "JetBrains Mono"; font.pixelSize: 16
                                 onActiveFocusChanged: if (activeFocus) win.focusedEditor = "slide"
                                 wrapMode: TextEdit.Wrap; leftPadding: 24; topPadding: 16; placeholderText: "# Your headline"
+                                Component.onCompleted: appTheme.highlight(textDocument)
                                 onTextChanged: {
                                     if (!win.syncingEditor && activeFocus) {
                                         const previousCount = deck.count
@@ -1923,13 +1965,13 @@ ApplicationWindow {
             Rectangle {
                 objectName: "sourceEditorFrame"
                 Layout.fillWidth: true; Layout.fillHeight: true
-                color: win.ui.background; radius: win.softRadius
+                color: win.ui.editor; radius: win.softRadius
                 readonly property color focusStroke: win.focusedEditor === "source" && !win.popupOpen ? win.ui.inactiveSelection : win.ui.border
                 border.color: focusStroke; border.width: 1
                 ScrollView {
                     id: sourceScroll; objectName: "sourceScroll"
                     anchors.fill: parent; anchors.margins: 1; clip: true
-                    background: Rectangle { color: win.ui.background }
+                    background: Rectangle { color: win.ui.editor }
                     Flickable {
                         id: sourceFlick; objectName: "sourceFlick"
                         clip: true; boundsBehavior: Flickable.StopAtBounds
@@ -1946,6 +1988,7 @@ ApplicationWindow {
                             color: win.ui.foreground; selectionColor: win.ui.selection; selectedTextColor: win.ui.selectionText
                             font.family: "JetBrains Mono"; font.pixelSize: 18
                             wrapMode: TextEdit.NoWrap; leftPadding: 32; topPadding: 30; bottomPadding: 30
+                            Component.onCompleted: appTheme.highlight(textDocument)
                             onTextChanged: { if (!win.syncingEditor && activeFocus && text !== deck.source) deck.editSource(text) }
                             onCursorPositionChanged: { if (!win.syncingEditor && activeFocus) deck.selectAt(cursorPosition) }
                             Keys.onPressed: function(event) { win.editorKey(sourceEditor, sourceFlick, event) }

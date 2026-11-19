@@ -16,6 +16,7 @@
 #include <QQuickStyle>
 #include <QQuickWindow>
 #include <QScopeGuard>
+#include <QStandardPaths>
 #include <QTimer>
 #include <cstdio>
 // The desktop's interface font, e.g. "Adwaita Sans 11", which the gtk3 platform
@@ -35,12 +36,12 @@ static void adoptDesktopFont() {
     QGuiApplication::setFont(font);
 }
 int main(int argc, char **argv) {
-    // Hype themes itself. Qt's gtk3 platform theme only adds a use-after-free
+    // Beamdown themes itself. Qt's gtk3 platform theme only adds a use-after-free
     // inside GTK when the desktop theme changes under a running editor.
     qputenv("QT_QPA_PLATFORMTHEME", "generic");
     // Commands, exports and help draw no window, so they must not need a display,
     // even where the desktop exports QT_QPA_PLATFORM=wayland.
-    // Bare hype prints help, as a command line tool should; launchers say hype open.
+    // Bare beamdown prints help, as a command line tool should; launchers say beamdown open.
     const bool command = argc == 1 || isCliCommand(argv[1]);
     bool windowless = command;
     for (int i = 1; i < argc; ++i) {
@@ -52,13 +53,13 @@ int main(int argc, char **argv) {
     if (windowless)
         qputenv("QT_QPA_PLATFORM", "offscreen");
     QGuiApplication app(argc, argv);
-    app.setApplicationName("hype");
+    app.setApplicationName("beamdown");
     app.setApplicationVersion("0.6.0");
-    app.setDesktopFileName(qEnvironmentVariable("HYPE_DESKTOP_FILE", "hype"));
+    app.setDesktopFileName(qEnvironmentVariable("HYPE_DESKTOP_FILE", "io.github.sergio_gimenez.Beamdown"));
     if (command)
         return runCli(app.arguments());
     QCommandLineParser args;
-    args.setApplicationDescription("Simple Markdown presentations with a visual slide editor.\n\n" + cliSummary());
+    args.setApplicationDescription("PowerPoint + LaTeX Beamer, but Markdown-driven.\n\n" + cliSummary());
     args.addHelpOption();
     args.addVersionOption();
     args.addPositionalArgument("presentation", "Markdown presentation");
@@ -78,6 +79,9 @@ int main(int argc, char **argv) {
     if (arguments.value(1) == "open")
         arguments.removeAt(1);
     args.process(arguments);
+    // Only the editor migrates, so commands and exports leave the desktop's files alone.
+    if (!windowless)
+        Deck::adoptHypeData(QStandardPaths::writableLocation(QStandardPaths::StateLocation));
     Deck deck;
     const bool exportWorker = args.isSet(snapshotOption);
     auto report = [](const QJsonObject &event) {

@@ -1,5 +1,6 @@
 #include "budget.h"
 #include "apptheme.h"
+#include "markdownhighlighter.h"
 #include "deck.h"
 #include "filedialog.h"
 #include "renderer.h"
@@ -26,6 +27,8 @@
 #include <QMediaPlayer>
 #include <QPainter>
 #include <QTextTable>
+#include <QTextBlock>
+#include <QTextLayout>
 #include <QPdfDocument>
 #include <QProcess>
 #include <QQmlApplicationEngine>
@@ -39,6 +42,7 @@
 #include <QScreen>
 #include <QSaveFile>
 #include <QScopeGuard>
+#include <QThread>
 #include <QSemaphore>
 #include <QThreadPool>
 #include <QTimer>
@@ -81,6 +85,33 @@ class TestFilePortal : public QDBusVirtualObject {
             reply();
             QTimer::singleShot(10, this, response);
         }
+        return true;
+    }
+};
+
+// GNOME's dark style and accent color, as the settings portal reports them.
+class TestSettingsPortal : public QDBusVirtualObject {
+  public:
+    uint scheme = 1;
+    QColor accent{"#e62d42"};
+    QString introspect(const QString &) const override { return {}; }
+    static QDBusVariant rgb(const QColor &color) {
+        QDBusArgument value;
+        value.beginStructure();
+        value << double(color.redF()) << double(color.greenF()) << double(color.blueF());
+        value.endStructure();
+        return QDBusVariant(QVariant::fromValue(value));
+    }
+    bool handleMessage(const QDBusMessage &message, const QDBusConnection &bus) override {
+        if (message.interface() != "org.freedesktop.portal.Settings" || message.member() != "ReadOne")
+            return false;
+        const QString key = message.arguments().value(1).toString();
+        if (key == "color-scheme")
+            bus.send(message.createReply(QVariant::fromValue(QDBusVariant(scheme))));
+        else if (key == "accent-color")
+            bus.send(message.createReply(QVariant::fromValue(rgb(accent))));
+        else
+            bus.send(message.createErrorReply("org.freedesktop.portal.Error.NotFound", key));
         return true;
     }
 };
@@ -212,6 +243,80 @@ static void write(const QString &path, const QString &content) {
                      qPrintable(value));
         }
     }
+    void looksLikeGnomeWithoutOmarchy() {
+        QTemporaryDir none;
+        qputenv("HYPE_COLOR_SCHEME", "dark");
+        const auto restore = qScopeGuard([] { qunsetenv("HYPE_COLOR_SCHEME"); });
+        AppTheme dark(none.path());
+        QVERIFY(dark.adwaita());
+        QCOMPARE(dark.rounding(), 12);
+        QCOMPARE(dark.controlRounding(), 6);
+        QCOMPARE(dark.colors().value("panel").value<QColor>(), QColor("#222226"));
+        QCOMPARE(dark.colors().value("headerbar").value<QColor>(), QColor("#2e2e32"));
+        QCOMPARE(dark.colors().value("popover").value<QColor>(), QColor("#36363a"));
+        QCOMPARE(dark.colors().value("accent").value<QColor>(), QColor("#3584e4"));
+        QCOMPARE(dark.colors().value("accentText").value<QColor>(), QColor("#ffffff"));
+        qputenv("HYPE_COLOR_SCHEME", "light");
+        AppTheme light(none.path());
+        QCOMPARE(light.colors().value("panel").value<QColor>(), QColor("#fafafb"));
+        QCOMPARE(light.colors().value("background").value<QColor>(), QColor("#ffffff"));
+        QCOMPARE(light.colors().value("sidebar").value<QColor>(), QColor("#ebebed"));
+        // The text box stands apart from the stage around it: lighter on dark, white on light.
+        auto lightness = [](const AppTheme &theme, const char *key) { return theme.colors().value(key).value<QColor>().lightnessF(); };
+        QVERIFY(lightness(dark, "editor") > lightness(dark, "stage") + 0.05);
+        QCOMPARE(light.colors().value("editor").value<QColor>(), QColor("#ffffff"));
+        QVERIFY(lightness(light, "stage") < lightness(light, "editor") - 0.03);
+        // Both styles name the same colors as an Omarchy theme, and a few more.
+        QCOMPARE(AppTheme::adwaitaColors(true, Qt::red).keys(), AppTheme::adwaitaColors(false, Qt::red).keys());
+        // An Omarchy theme brings back the Omarchy look.
+        QVERIFY(QDir().mkpath(none.filePath("theme")));
+        write(none.filePath("theme/colors.toml"), "background = '#101020'\n");
+        QTRY_VERIFY(!light.adwaita());
+        QCOMPARE(light.colors().value("headerbar"), light.colors().value("panel"));
+        QCOMPARE(light.colors().value("popover"), light.colors().value("panel"));
+        QCOMPARE(light.colors().value("editor"), light.colors().value("background"));
+        QCOMPARE(light.colors().value("stage"), light.colors().value("background"));
+        QCOMPARE(light.controlRounding(), 0);
+        for (const auto &key : AppTheme::adwaitaColors(true, Qt::red).keys())
+            QVERIFY2(light.colors().contains(key), qPrintable(key));
+    }
+    void followsGnomeStyleChanges() {
+        if (!qEnvironmentVariableIsSet("HYPE_PORTAL_TESTS"))
+            QSKIP("Run with HYPE_PORTAL_TESTS=1 under dbus-run-session");
+        auto bus = QDBusConnection::connectToBus(QDBusConnection::SessionBus, "test-settings-portal");
+        QVERIFY(bus.registerService("org.freedesktop.portal.Desktop"));
+        // AppTheme reads the portal with a blocking call, so the portal answers from its own thread.
+        QThread thread;
+        TestSettingsPortal portal;
+        portal.moveToThread(&thread);
+        thread.start();
+        QVERIFY(bus.registerVirtualObject("/org/freedesktop/portal/desktop", &portal));
+        const auto cleanup = qScopeGuard([&] {
+            bus.unregisterObject("/org/freedesktop/portal/desktop");
+            bus.unregisterService("org.freedesktop.portal.Desktop");
+            thread.quit();
+            thread.wait();
+        });
+        QTemporaryDir none;
+        AppTheme theme(none.path());
+        QCOMPARE(theme.colors().value("panel").value<QColor>(), QColor("#222226"));
+        QCOMPARE(theme.colors().value("accent").value<QColor>(), QColor("#e62d42"));
+        auto change = [&](const QString &key, const QDBusVariant &value) {
+            auto signal = QDBusMessage::createSignal("/org/freedesktop/portal/desktop",
+                                                     "org.freedesktop.portal.Settings", "SettingChanged");
+            signal.setArguments({"org.freedesktop.appearance", key, QVariant::fromValue(value)});
+            QVERIFY(bus.send(signal));
+        };
+        change("color-scheme", QDBusVariant(uint(2)));
+        QTRY_COMPARE(theme.colors().value("panel").value<QColor>(), QColor("#fafafb"));
+        change("accent-color", TestSettingsPortal::rgb(QColor("#3a944a")));
+        QTRY_COMPARE(theme.colors().value("accent").value<QColor>(), QColor("#3a944a"));
+        // No preference is GNOME's default style, which is light.
+        change("color-scheme", QDBusVariant(uint(1)));
+        QTRY_COMPARE(theme.colors().value("panel").value<QColor>(), QColor("#222226"));
+        change("color-scheme", QDBusVariant(uint(0)));
+        QTRY_COMPARE(theme.colors().value("panel").value<QColor>(), QColor("#fafafb"));
+    }
     void followsDesktopTheme() {
         QTemporaryDir files;
         const QString current = files.path() + "/current";
@@ -280,7 +385,7 @@ static void write(const QString &path, const QString &content) {
         QVERIFY(!first.loadPath(files.path() + "/missing/talk.md"));
         QVERIFY(!first.savePath(files.path() + "/missing/copy.md"));
         QCOMPARE(next.dialogDirectory(), saved);
-        QSettings persisted(QSettings::IniFormat, QSettings::UserScope, "hype", "hype");
+        QSettings persisted(QSettings::IniFormat, QSettings::UserScope, "beamdown", "beamdown");
         QCOMPARE(persisted.value("files/lastDirectory").toString(), saved);
         QVERIFY(QFile::exists(persisted.fileName()));
         QVERIFY(QDir(saved).removeRecursively());
@@ -288,7 +393,7 @@ static void write(const QString &path, const QString &content) {
         QVERIFY(QDir(next.dialogDirectory()).exists());
     }
     void reopensLastPresentation() {
-        QSettings settings(QSettings::IniFormat, QSettings::UserScope, "hype", "hype");
+        QSettings settings(QSettings::IniFormat, QSettings::UserScope, "beamdown", "beamdown");
         settings.remove("files/lastPresentation");
         Deck first;
         const QString initial = first.source();
@@ -1490,10 +1595,10 @@ static void write(const QString &path, const QString &content) {
         QCOMPARE(d.slide(1), QString("# Two\n"));
     }
     void svgKeepsItsWeightInPdf() {
-        // A white bar two units wide in a ten-unit drawing, as a path the way glyphs are drawn:
-        // filled, never stroked.
+        // A white bar two units wide in a ten-unit drawing, on a dark slide, as a path the way
+        // glyphs are drawn: filled, never stroked.
         Deck d;
-        d.editSource("```svg\n<svg viewBox=\"0 0 10 10\"><path d=\"M4 0H6V10H4Z\" fill=\"#ffffff\"/></svg>\n```\n");
+        d.editSource("---\ntheme: tokyo-night\n---\n\n```svg\n<svg viewBox=\"0 0 10 10\"><path d=\"M4 0H6V10H4Z\" fill=\"#ffffff\"/></svg>\n```\n");
         QTemporaryDir tmp;
         QVERIFY(d.exportPdf(tmp.filePath("bar.pdf")));
         QPdfDocument pdf;
@@ -1522,7 +1627,7 @@ static void write(const QString &path, const QString &content) {
         const Diagram drawn = mermaidDiagram(flow, deck);
         QVERIFY2(drawn.error.isEmpty(), qPrintable(drawn.error));
         QVERIFY(QSvgRenderer(drawn.svg).isValid());
-        QCOMPARE(QDir(cache.filePath("hype/mermaid")).entryList({"*.svg"}).size(), 1);
+        QCOMPARE(QDir(cache.filePath("beamdown/mermaid")).entryList({"*.svg"}).size(), 1);
         QCOMPARE(mermaidDiagram(flow, deck).svg, drawn.svg);
         // Mermaid's own theme draws it differently from the deck's colors.
         auto github = deck;
@@ -1572,7 +1677,7 @@ static void write(const QString &path, const QString &content) {
         QVERIFY(!formula.outline.isEmpty());
         // The baseline sits at y = 0: the subscript hangs below it.
         QVERIFY(formula.box.top() < 0 && formula.box.bottom() > 0);
-        QCOMPARE(QDir(cache.filePath("hype/math")).entryList({"*.svg"}).size(), 1);
+        QCOMPARE(QDir(cache.filePath("beamdown/math")).entryList({"*.svg"}).size(), 1);
         // Displayed, a sum is set larger than in a line.
         QVERIFY(typesetFormula({"\\sum_{i=1}^n i", true}, false).box.height() >
                 typesetFormula({"\\sum_{i=1}^n i", false}, false).box.height());
@@ -1989,7 +2094,7 @@ static void write(const QString &path, const QString &content) {
         const QImage page = pdf.render(0, QSize(1920, 1080));
         const QColor corner = page.pixelColor(1850, 1010), outside = page.pixelColor(1850, 900);
         QVERIFY2(corner.red() > 200 && corner.green() < 60, qPrintable(corner.name()));
-        QVERIFY2(outside.red() < 100, qPrintable(outside.name()));
+        QVERIFY2(nearColor(outside, background), qPrintable(outside.name()));
         // A missing placed image keeps its placeholder inside the small box.
         slide.fill(Qt::transparent);
         p.begin(&slide);
@@ -2237,7 +2342,7 @@ static void write(const QString &path, const QString &content) {
         QCOMPARE(withMedia(examples, replacement), examples + "\n" + replacement + "\n");
     }
     void asynchronousExport() {
-        const QString executable = QFINDTESTDATA("../build/hype");
+        const QString executable = QFINDTESTDATA("../build/beamdown");
         QVERIFY(!executable.isEmpty());
         QTemporaryDir tmp;
         Deck deck(nullptr, executable);
@@ -3457,7 +3562,19 @@ static void write(const QString &path, const QString &content) {
                               QPoint(0, -120), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase,
                               false);
         QCoreApplication::sendEvent(window, &textWheel);
-        QCOMPARE(flick->property("contentY").toDouble(), initialScroll + 180);
+        // A wheel notch glides there rather than jumping, and a second one mid-glide adds to it.
+        QVERIFY(flick->property("contentY").toDouble() < initialScroll + 180);
+        QTRY_COMPARE(flick->property("contentY").toDouble(), initialScroll + 180);
+        QCoreApplication::sendEvent(window, &textWheel);
+        QTest::qWait(40);
+        QCoreApplication::sendEvent(window, &textWheel);
+        QTRY_COMPARE(flick->property("contentY").toDouble(), initialScroll + 540);
+        // A touchpad follows the fingers at once.
+        QWheelEvent fingers(sourcePoint, window->mapToGlobal(sourcePoint.toPoint()), QPoint(0, 40),
+                            QPoint(), Qt::NoButton, Qt::NoModifier, Qt::ScrollUpdate, false,
+                            Qt::MouseEventSynthesizedBySystem, &touchpad);
+        QCoreApplication::sendEvent(window, &fingers);
+        QCOMPARE(flick->property("contentY").toDouble(), initialScroll + 500);
         QCOMPARE(d.source(), beforeToggle);
 
         QTest::keyClick(window, Qt::Key_Period, Qt::ControlModifier);
@@ -4162,6 +4279,119 @@ static void write(const QString &path, const QString &content) {
         QCOMPARE(reopened.fontName(), family);
         d.undo();
         QCOMPARE(d.source(), original);
+    }
+    void adoptsHypeSettingsAndDraftsOnce() {
+        QTemporaryDir home;
+        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, home.filePath("config"));
+        const auto restore = qScopeGuard([&] {
+            QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDirectory.path());
+        });
+        QSettings(QSettings::IniFormat, QSettings::UserScope, "hype", "hype").setValue("window/editorHeight", 321);
+        QVERIFY(QDir().mkpath(home.filePath("state/hype/recovery/draft")));
+        write(home.filePath("state/hype/recovery/draft/latest.json"), "{}");
+        Deck::adoptHypeData(home.filePath("state/beamdown"));
+        QCOMPARE(Deck().editorHeight(), 321.0);
+        QVERIFY(QFile::exists(home.filePath("state/beamdown/recovery/draft/latest.json")));
+        QVERIFY(!QFile::exists(home.filePath("state/hype/recovery")));
+        // Hype keeps its settings, and later runs leave Beamdown's own alone.
+        QCOMPARE(QSettings(QSettings::IniFormat, QSettings::UserScope, "hype", "hype").value("window/editorHeight").toInt(), 321);
+        Deck().setEditorHeight(400);
+        QVERIFY(QDir().mkpath(home.filePath("state/hype/recovery/newer")));
+        Deck::adoptHypeData(home.filePath("state/beamdown"));
+        QCOMPARE(Deck().editorHeight(), 400.0);
+        QVERIFY(!QFile::exists(home.filePath("state/beamdown/recovery/newer")));
+    }
+    void highlightsMarkdownAsSlidesReadIt() {
+        const QString source = "---\ntitle: Talk\n---\n\n# Head **bold**\n\n"
+                               "- item *it* `co*de*` $x^2$\n![fit](a.png) [t](http://u)\n"
+                               "<!-- hype: section=\"A\"\nstill comment -->\n```python\nx = 1\n```\n"
+                               ". . .\nprice $5 and $6\n";
+        QTextDocument document;
+        document.setPlainText(source);
+        MarkdownHighlighter highlighter(&document);
+        QVariantMap colors{{"heading", QColor("#000001")}, {"marker", QColor("#000002")},
+                           {"code", QColor("#000003")},    {"link", QColor("#000004")},
+                           {"key", QColor("#000005")},     {"math", QColor("#000006")},
+                           {"comment", QColor("#000007")}};
+        highlighter.setColors(colors);
+        auto at = [&](int line, const QString &needle) {
+            const QTextBlock block = document.findBlockByNumber(line);
+            const int position = block.text().indexOf(needle);
+            QTextCharFormat format;
+            for (const auto &range : block.layout()->formats())
+                if (position >= range.start && position < range.start + range.length)
+                    format = range.format;
+            return format;
+        };
+        auto color = [&](int line, const QString &needle) {
+            const auto format = at(line, needle);
+            return format.hasProperty(QTextFormat::ForegroundBrush) ? format.foreground().color().name() : QString();
+        };
+        QCOMPARE(color(1, "title"), "#000005");
+        QCOMPARE(color(4, "#"), "#000002");
+        QCOMPARE(color(4, "Head"), "#000001");
+        QCOMPARE(at(4, "Head").fontWeight(), int(QFont::Bold));
+        // Bold inside a heading keeps the heading's color.
+        QCOMPARE(color(4, "bold"), "#000001");
+        QCOMPARE(color(4, "**"), "#000002");
+        QCOMPARE(color(6, "-"), "#000001");
+        QVERIFY(at(6, "it*").fontItalic());
+        // Code wins over what looks like emphasis inside it.
+        QCOMPARE(color(6, "co*de"), "#000003");
+        QVERIFY(!at(6, "de*").fontItalic());
+        QCOMPARE(color(6, "x^2"), "#000006");
+        QCOMPARE(color(7, "fit"), "#000005");
+        QCOMPARE(color(7, "a.png"), "#000004");
+        QCOMPARE(color(7, "http"), "#000004");
+        QCOMPARE(color(8, "hype:"), "#000005");
+        QCOMPARE(color(8, "section"), "#000007");
+        QCOMPARE(color(9, "still"), "#000007");
+        QCOMPARE(color(10, "python"), "#000005");
+        QCOMPARE(color(11, "x = 1"), "#000003");
+        QCOMPARE(color(13, ". . ."), "#000002");
+        QCOMPARE(color(14, "$5"), QString());
+        // Highlighting never touches the text, and follows new colors.
+        QCOMPARE(document.toPlainText(), source);
+        colors["heading"] = QColor("#000009");
+        highlighter.setColors(colors);
+        QCOMPARE(color(4, "Head"), "#000009");
+    }
+    void bundledThemes() {
+        Deck d;
+        for (const char *name : {"adwaita", "adwaita-dark", "beamer", "metropolis", "metropolis-dark", "tokyo-night"})
+            QVERIFY2(d.themeNames().contains(name), name);
+        // New presentations start light.
+        QVERIFY(d.source().contains("theme: adwaita\n"));
+        QCOMPARE(d.background(), QColor("#ffffff"));
+        // Beamer colors its frame titles; other themes leave headings in the text color.
+        d.chooseTheme("beamer");
+        QVERIFY(d.source().contains("color_heading:"));
+        QCOMPARE(d.palette().value("heading").toString(), QString("#3333b3"));
+        d.chooseTheme("metropolis");
+        QVERIFY(!d.source().contains("color_heading"));
+        QVERIFY(!d.palette().contains("heading"));
+        QCOMPARE(d.background(), QColor("#fafafa"));
+        // Headings take the heading color, and bold text still takes the accent.
+        QVariantMap palette{{"background", "#000000"}, {"foreground", "#00ff00"}, {"accent", "#0000ff"},
+                            {"heading", "#ff0000"}, {"font", "JetBrains Mono"}};
+        auto colors = [&](const QString &slide) {
+            QImage image(960, 540, QImage::Format_ARGB32_Premultiplied);
+            QPainter painter(&image);
+            paintSlide(&painter, image.rect(), slide, "/tmp", palette);
+            painter.end();
+            QSet<QRgb> seen;
+            for (int y = 0; y < image.height(); ++y)
+                for (int x = 0; x < image.width(); ++x)
+                    seen.insert(image.pixel(x, y) & 0xffffff);
+            return seen;
+        };
+        auto heading = colors("# HHHH");
+        QVERIFY(heading.contains(0xff0000));
+        QVERIFY(!heading.contains(0x00ff00));
+        auto body = colors("# HHHH\n\nplain **bold**");
+        QVERIFY(body.contains(0xff0000) && body.contains(0x00ff00) && body.contains(0x0000ff));
+        palette.remove("heading");
+        QVERIFY(!colors("# HHHH").contains(0xff0000));
     }
     void themeSnapshot() {
         Deck d;

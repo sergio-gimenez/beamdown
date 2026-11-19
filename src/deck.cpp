@@ -141,7 +141,7 @@ QString setScalar(QString header, const QString &key, const QString &value) {
 Deck::Deck(QObject *parent, const QString &exportProgram) : QAbstractListModel(parent),
     m_exportProgram(exportProgram.isEmpty() ? QCoreApplication::applicationFilePath() : exportProgram) {
     discoverThemes();
-    m_source = "---\ntheme: tokyo-night\n---\n\n# Your next idea\n";
+    m_source = "---\ntheme: adwaita\n---\n\n# Your next idea\n";
     m_parsed = parseDeck(m_source);
     m_saved = m_source;
     // Writers may truncate, or remove and recreate, the file; read it once they settle.
@@ -168,7 +168,7 @@ Deck::Deck(QObject *parent, const QString &exportProgram) : QAbstractListModel(p
             return;
         if (!file.open(QIODevice::ReadOnly)) {
             m_externalChange = true;
-            setStatus("Presentation changed or was removed outside Hype.");
+            setStatus("Presentation changed or was removed outside Beamdown.");
             return;
         }
         const QString disk = QString::fromUtf8(file.readAll());
@@ -639,6 +639,10 @@ void Deck::redo() {
     apply(state.source, state.selected, false, state.anchor, &state.parsed);
 }
 void Deck::discoverThemes() {
+    // Bundled themes come first, so a desktop without Omarchy still has a choice;
+    // an installed theme of the same name replaces the bundled one.
+    for (const auto &name : QDir(":/themes").entryList(QDir::Dirs | QDir::NoDotAndDotDot))
+        m_themes[name] = ":/themes/" + name + "/colors.toml";
     QString root = qEnvironmentVariable("OMARCHY_PATH", QDir::homePath() + "/.local/share/omarchy");
     QStringList roots{root + "/themes", QDir::homePath() + "/omarchy/themes",
                       QDir::homePath() + "/.config/omarchy/themes"};
@@ -695,14 +699,15 @@ void Deck::chooseFont(const QString &family) {
     replaceHeader(header);
 }
 QStringList Deck::themeNames() const { return m_themes.keys(); }
-QString Deck::themeName() const { return scalar(m_parsed.header, "theme", "tokyo-night"); }
+QString Deck::themeName() const { return scalar(m_parsed.header, "theme", "adwaita"); }
 QVariantMap Deck::palette() const {
     if (!m_paletteCache.isEmpty() && m_paletteHeader == m_parsed.header)
         return m_paletteCache;
+    // Adwaita's colors, for a deck that names no theme or one that isn't installed.
     QVariantMap colors{
-        {"background", "#1a1b26"}, {"foreground", "#c0caf5"}, {"accent", "#7aa2f7"},
-        {"green", "#9ece6a"},      {"red", "#f7768e"},        {"yellow", "#e0af68"},
-        {"magenta", "#bb9af7"},    {"cyan", "#7dcfff"},       {"dark_foreground", "#787c99"}};
+        {"background", "#ffffff"}, {"foreground", "#241f31"}, {"accent", "#1c71d8"},
+        {"green", "#26a269"},      {"red", "#c01c28"},        {"yellow", "#9c6e03"},
+        {"magenta", "#813d9c"},    {"cyan", "#1b7f8c"},       {"dark_foreground", "#77767b"}};
     QFile f(m_themes.value(themeName()));
     if (f.open(QIODevice::ReadOnly)) {
         QRegularExpression re("^([a-z_]+)\\s*=\\s*\"(#[0-9a-fA-F]{6})\"",
@@ -718,6 +723,9 @@ QVariantMap Deck::palette() const {
         if (QColor(v).isValid())
             colors[key] = v;
     }
+    // Headings take the text color unless the theme or the deck names one.
+    if (const QString heading = scalar(m_parsed.header, "color_heading"); QColor(heading).isValid())
+        colors["heading"] = heading;
     colors["font"] = scalar(m_parsed.header, "font", "JetBrains Mono");
     // Typography and the running header travel with the colors, so every render sees them.
     colors["heading_font"] = scalar(m_parsed.header, "heading_font", colors["font"].toString());
@@ -870,7 +878,7 @@ void Deck::notifyChanged() {
     }
 }
 QString Deck::dialogDirectory() const {
-    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "hype", "hype");
+    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "beamdown", "beamdown");
     const QString last = settings.value("files/lastDirectory").toString();
     if (!last.isEmpty() && QDir(last).exists())
         return last;
@@ -880,18 +888,29 @@ QString Deck::dialogDirectory() const {
     return !documents.isEmpty() && QDir(documents).exists() ? documents : QDir::homePath();
 }
 double Deck::editorHeight() const {
-    return QSettings(QSettings::IniFormat, QSettings::UserScope, "hype", "hype").value("window/editorHeight").toDouble();
+    return QSettings(QSettings::IniFormat, QSettings::UserScope, "beamdown", "beamdown").value("window/editorHeight").toDouble();
 }
 void Deck::setEditorHeight(double height) {
-    QSettings(QSettings::IniFormat, QSettings::UserScope, "hype", "hype").setValue("window/editorHeight", qRound(height));
+    QSettings(QSettings::IniFormat, QSettings::UserScope, "beamdown", "beamdown").setValue("window/editorHeight", qRound(height));
+}
+void Deck::adoptHypeData(const QString &stateDirectory) {
+    // Settings are copied, so Hype keeps its own; drafts move, so only one app restores them.
+    const QString settings = QSettings(QSettings::IniFormat, QSettings::UserScope, "beamdown", "beamdown").fileName();
+    const QString hype = QSettings(QSettings::IniFormat, QSettings::UserScope, "hype", "hype").fileName();
+    if (!QFileInfo::exists(settings) && QFileInfo::exists(hype) && QDir().mkpath(QFileInfo(settings).absolutePath()))
+        QFile::copy(hype, settings);
+    const QString recovery = stateDirectory + "/recovery";
+    const QString hypeRecovery = QFileInfo(stateDirectory).absolutePath() + "/hype/recovery";
+    if (!QFileInfo::exists(recovery) && QFileInfo(hypeRecovery).isDir() && QDir().mkpath(stateDirectory))
+        QDir().rename(hypeRecovery, recovery);
 }
 static void rememberPresentation(const QString &path) {
-    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "hype", "hype");
+    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "beamdown", "beamdown");
     settings.setValue("files/lastDirectory", QFileInfo(path).absolutePath());
     settings.setValue("files/lastPresentation", path);
 }
 bool Deck::reopenLastPresentation() {
-    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "hype", "hype");
+    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "beamdown", "beamdown");
     const QString path =
         settings.value("files/lastRecoveryDocument", settings.value("files/lastPresentation"))
             .toString();
@@ -1171,7 +1190,7 @@ void Deck::newDeck() {
     m_path.clear();
     m_saved.clear();
     m_externalChange = false;
-    apply("---\ntheme: tokyo-night\n---\n\n# Your next idea\n", 0);
+    apply("---\ntheme: adwaita\n---\n\n# Your next idea\n", 0);
     m_undo.clear();
     m_redo.clear();
     watch();

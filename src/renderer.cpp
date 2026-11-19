@@ -932,7 +932,10 @@ static void sizeSlideText(QTextDocument &doc, const QVariantMap &palette, qreal 
                 cf.setProperty(QTextFormat::FontSizeAdjustment, 4 - level);
             }
             QColor color(palette["foreground"].toString());
-            if (fragment.format.fontWeight() >= QFont::Bold && !level)
+            // A theme can set its headings apart, as beamer colors its frame titles.
+            if (level && palette.contains("heading"))
+                color = QColor(palette["heading"].toString());
+            else if (fragment.format.fontWeight() >= QFont::Bold && !level)
                 color = QColor(palette["accent"].toString());
             if (block.text().startsWith(QString::fromUtf8("—"))) {
                 cf.setProperty(QTextFormat::FontPixelSize, qRound(fontSize * 0.7));

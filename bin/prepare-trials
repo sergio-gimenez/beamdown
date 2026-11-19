@@ -21,7 +21,7 @@ test -x "$PYTHON" && test -x "$KEYNOTE" || {
 for TOOL in libreoffice magick; do
   command -v "$TOOL" >/dev/null || { echo "Missing dependency: $TOOL" >&2; exit 1; }
 done
-test -x ./build/hype || { echo 'Run bin/build first.' >&2; exit 1; }
+test -x ./build/beamdown || { echo 'Run bin/build first.' >&2; exit 1; }
 for SOURCE in "$PRESENTATIONS/2023/Rails World/Rails World 2024.key" \
   "$PRESENTATIONS/2024/Rails World 2024/Rails World 2024.pptx" \
   "$PRESENTATIONS/2025/Rails World 2025/Presentation/Rails World 2025.pptx" \
@@ -40,7 +40,7 @@ test -f "$WORK/Rails World 2024.pptx" || { echo "LibreOffice conversion produced
 "$PYTHON" tools/import_trial.py "$PRESENTATIONS/2025/Rails World 2025/Presentation/Rails World 2025.pptx" "$STAGING"/rails-world-2025 --year 2025
 "$PYTHON" tools/refine_trials.py --root "$STAGING" --keynote-unpacked "$WORK/keynote" --originals "$PRESENTATIONS"
 for YEAR in 2023 2024 2025; do
-  XDG_CONFIG_HOME="$WORK/config" XDG_STATE_HOME="$WORK/state" QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic QT_STYLE_OVERRIDE=Fusion ./build/hype "$STAGING/rails-world-$YEAR/presentation.md" --theme tokyo-night --save
+  XDG_CONFIG_HOME="$WORK/config" XDG_STATE_HOME="$WORK/state" QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic QT_STYLE_OVERRIDE=Fusion ./build/beamdown "$STAGING/rails-world-$YEAR/presentation.md" --theme tokyo-night --save
 done
 PYTHONPATH="$ROOT/tools" "$PYTHON" - "$STAGING" "$ROOT/trials" <<'PYTHON'
 import sys
