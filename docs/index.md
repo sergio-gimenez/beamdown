@@ -132,4 +132,4 @@ hide:
 
 ## Where it comes from
 
-Beamdown is inspired by [Hype](https://github.com/omacom/hype), the Markdown presentation app that David Heinemeier Hansson (DHH) showed in his 2026 Rails keynote. It started as a fork of Hype and has since diverged too much to follow it, so it is now its own app. It still reads and writes Hype's file format. [Read the story](why.md).
+Beamdown is inspired by [Hype](https://github.com/omacom/hype), the Markdown presentation app that David Heinemeier Hansson (DHH) showed in his [Rails World 2026 opening keynote](https://www.youtube.com/watch?v=vDjW_dRyKXY&t=3081s). It started as a fork of Hype and has since diverged too much to follow it, so it is now its own app. It still reads and writes Hype's file format. [Read the story](why.md).
