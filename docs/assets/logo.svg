@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <title>Beamdown</title>
+  <desc>A slide in GNOME's icon style: a blue frame-title bar, as beamer draws one, over the Markdown mark, an M and a down arrow.</desc>
+  <defs>
+    <linearGradient id="band" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#62a0ea"/>
+      <stop offset="1" stop-color="#3584e4"/>
+    </linearGradient>
+    <clipPath id="card">
+      <rect x="10" y="18" width="108" height="84" rx="12"/>
+    </clipPath>
+  </defs>
+  <!-- The slab under the card gives GNOME icons their depth. -->
+  <rect x="10" y="24" width="108" height="84" rx="12" fill="#9a9996"/>
+  <rect x="10" y="18" width="108" height="84" rx="12" fill="#ffffff"/>
+  <g clip-path="url(#card)">
+    <rect x="10" y="18" width="108" height="24" fill="url(#band)"/>
+    <rect x="10" y="42" width="108" height="2" fill="#1c71d8"/>
+  </g>
+  <rect x="22" y="26" width="46" height="8" rx="4" fill="#ffffff" opacity=".92"/>
+  <path d="M27 88V58l13 15 13-15v30" fill="none" stroke="#241f31" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M86 57v29M75 76l11 11 11-11" fill="none" stroke="#1c71d8" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
