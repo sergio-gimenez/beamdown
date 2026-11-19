@@ -16,6 +16,22 @@ checks, renders, and exports it. No command needs a display.
 Run `beamdown help format` first. It prints the whole slide format, including front
 matter, slide separators, and image and video options, for this version of Beamdown.
 
+You write the first draft; the person finishes it in Beamdown's visual editor. So
+keep the Markdown plain and easy to change, and follow their brand from the start.
+
+## Brand guidelines
+
+Before writing, look for the person's brand guidelines: in their request, or in a
+`BRAND.md` (any case) beside the presentation or in a folder above it. Apply them:
+
+- Colors, fonts and the running header go in the front matter: `color_background`,
+  `color_foreground`, `color_accent` and the other `color_*` values, `font`,
+  `heading_font`, `heading_weight`, `text_size`, `heading_size` and `header`.
+  Use their exact hex values; never invent brand colors.
+- Content rules (tone, bullets per slide, a logo's position, sections) apply to
+  every slide you write.
+- With no guidelines, use a bundled theme (`beamdown themes`) and say which.
+
 ## Workflow
 
 1. Start: `beamdown new talk/presentation.md --title "My talk"` (`beamdown themes` lists
@@ -28,7 +44,9 @@ matter, slide separators, and image and video options, for this version of Beamd
    split the slide.
 4. Look: `beamdown render <file> --slide N -o /tmp/slide.png`, then view the PNG.
    Do this for slides whose layout matters: images, code, long text.
-5. Export when asked: `beamdown export <file> talk.pdf` or `talk.pptx`.
+5. Hand it over: say where the file is and that `beamdown open <file>` opens it in
+   the editor, where they can reorder, retype and restyle it.
+6. Export when asked: `beamdown export <file> talk.pdf` or `talk.pptx`.
 
 ## Working with the person
 
