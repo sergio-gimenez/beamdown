@@ -18,6 +18,11 @@ cd beamdown
 
 ## Your first presentation
 
+!!! tip "Let your agent write the first draft"
+    The quickest start is to have your agent draft the deck from your notes and brand guidelines, then finish it here. See [Draft with your agent](agents.md).
+
+To start by hand:
+
 1. Open Beamdown and press **Ctrl+N** for a new presentation, or **Ctrl+O** to open a Markdown file.
 2. Write the first slide in the editor under the preview. Changes appear as you type.
 3. Press **Ctrl+Enter** to add a slide, and drag slides in the sidebar to reorder them.

@@ -6,8 +6,8 @@
 
 **PowerPoint + LaTeX Beamer, but Markdown-driven.**
 
-A presentation app for GNOME. Write one Markdown file, see every slide as you type,<br>
-and export to PDF or PowerPoint. No LaTeX document to compile.
+A presentation app for GNOME. Your agent drafts the deck in Markdown, following your<br>
+brand guidelines. You finish it in a visual editor, and export to PDF or PowerPoint.
 
 [**Documentation**](https://beamdown.sergiogimenez.com) ·
 [Get started](https://beamdown.sergiogimenez.com/start/) ·
@@ -21,6 +21,14 @@ and export to PDF or PowerPoint. No LaTeX document to compile.
 </picture>
 
 </div>
+
+## How it works
+
+1. **Your agent drafts.** Run `beamdown skill install` once. From your notes and a `BRAND.md` with your colors, type and rules, the agent writes `presentation.md`, checks it with `beamdown check` and looks at every slide.
+2. **You make it yours.** `beamdown open` the draft and reorder, retype and restyle it, seeing each slide as you type. The agent can keep editing alongside you.
+3. **You present.** Full screen with Presenter View, or export to PDF or PowerPoint.
+
+See [Draft with your agent](https://beamdown.sergiogimenez.com/agents/) for an example `BRAND.md`, a prompt, and the deck it produced.
 
 ## Highlights
 

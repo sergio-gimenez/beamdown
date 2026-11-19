@@ -11,6 +11,7 @@ site_dir = "public"
 nav = [
   { "Home" = "index.md" },
   { "Get started" = "start.md" },
+  { "Draft with your agent" = "agents.md" },
   { "Guide" = [
     { "The editor" = "editor.md" },
     { "Write your slides" = "write.md" },

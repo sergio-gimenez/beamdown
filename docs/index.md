@@ -14,7 +14,7 @@ hide:
 
 <p class="bd-hero__tagline">PowerPoint + LaTeX Beamer, <span>but Markdown-driven.</span></p>
 
-<p class="bd-hero__lede">A presentation app for GNOME. Write one Markdown file, see every slide as you type, and export to PDF or PowerPoint. No LaTeX document to compile.</p>
+<p class="bd-hero__lede">A presentation app for GNOME. Your agent drafts the deck in Markdown, following your brand guidelines. You finish it in a visual editor, and export to PDF or PowerPoint.</p>
 
 [Get started](start.md){ .md-button .md-button--primary }
 [View on GitHub](https://github.com/sergio-gimenez/beamdown){ .md-button }
@@ -25,6 +25,34 @@ hide:
 ![The Beamdown editor: slides on the left, the slide in the middle, its Markdown below](assets/editor-dark.png#only-dark)
 ![The Beamdown editor: slides on the left, the slide in the middle, its Markdown below](assets/editor-light.png#only-light)
 </figure>
+
+## How it works
+
+<div class="grid cards bd-steps" markdown>
+
+-   :lucide-bot: **1. Your agent drafts**
+
+    ---
+
+    From your notes and your `BRAND.md`, it writes `presentation.md`, fixes what `beamdown check` finds, and looks at every slide it renders.
+
+-   :lucide-pencil: **2. You make it yours**
+
+    ---
+
+    Open the draft in Beamdown: reorder, retype and restyle, and see each slide change as you type. The agent can keep editing alongside you.
+
+-   :lucide-presentation: **3. You present**
+
+    ---
+
+    Present full screen with Presenter View, or export a PDF or a PowerPoint file in your brand.
+
+</div>
+
+[Draft with your agent](agents.md){ .md-button .md-button--primary }
+
+## What you get
 
 <div class="grid cards bd-features" markdown>
 
