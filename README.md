@@ -6,10 +6,23 @@
 
 **PowerPoint + LaTeX Beamer, but Markdown-driven, for the agentic era.**
 
+<p>
+<a href="https://beamdown.sergiogimenez.com"><img alt="Docs" src="https://img.shields.io/badge/docs-beamdown.sergiogimenez.com-3584e4?style=for-the-badge&logo=readthedocs&logoColor=white"></a>
+<a href="https://github.com/omacom/hype"><img alt="Forked from omacom/hype" src="https://img.shields.io/badge/forked%20from-omacom%2Fhype-555555?style=for-the-badge&logo=github&logoColor=white"></a>
+<a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/github/license/sergio-gimenez/beamdown?style=for-the-badge&color=3584e4"></a>
+<br>
+<img alt="GNOME, Adwaita" src="https://img.shields.io/badge/GNOME-Adwaita-4a86cf?style=for-the-badge&logo=gnome&logoColor=white">
+<a href="https://beamdown.sergiogimenez.com/start/"><img alt="Qt 6.9+" src="https://img.shields.io/badge/Qt-6.9%2B-41cd52?style=for-the-badge&logo=qt&logoColor=white"></a>
+<img alt="C++17" src="https://img.shields.io/badge/C%2B%2B-17-00599c?style=for-the-badge&logo=cplusplus&logoColor=white">
+<a href="https://beamdown.sergiogimenez.com/reference/"><img alt="Markdown-driven" src="https://img.shields.io/badge/Markdown-driven-241f31?style=for-the-badge&logo=markdown&logoColor=white"></a>
+<a href="https://beamdown.sergiogimenez.com/agents/"><img alt="Agent skill included" src="https://img.shields.io/badge/agent%20skill-included-c64600?style=for-the-badge&logo=claude&logoColor=white"></a>
+</p>
+
 A presentation app for GNOME. Your agent drafts the deck in Markdown, following your<br>
 brand guidelines. You finish it in a visual editor, and export to PDF or PowerPoint.
 
-<sub>Inspired by <a href="https://github.com/omacom/hype">Hype</a>, which DHH showed in his <a href="https://www.youtube.com/watch?v=vDjW_dRyKXY&t=3081s">Rails World 2026 opening keynote</a>.<br>Beamdown started as a fork of it and has since diverged too much to follow it, so it is now its own app.</sub>
+<em>Inspired by <a href="https://github.com/omacom/hype">Hype</a>, which DHH showed in his <a href="https://www.youtube.com/watch?v=vDjW_dRyKXY&t=3081s">Rails World 2026 opening keynote</a>.</em><br>
+<em>Beamdown started as a fork of it and has since diverged too much to follow it, so it is now its own app.</em>
 
 [**Documentation**](https://beamdown.sergiogimenez.com) ·
 [Get started](https://beamdown.sergiogimenez.com/start/) ·
